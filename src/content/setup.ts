@@ -1040,13 +1040,23 @@ export const setupHtml = `<div class="course-header">
       <span class="yaml-key">contents</span>: <span class="yaml-str">read</span>
       <span class="yaml-key">packages</span>: <span class="yaml-str">read</span>
     <span class="yaml-key">steps</span>:
+      - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/checkout@v4</span>
       - <span class="yaml-key">uses</span>: <span class="yaml-str">docker/login-action@v3</span>
         <span class="yaml-key">with</span>:
           <span class="yaml-key">registry</span>: <span class="yaml-str">ghcr.io</span>
           <span class="yaml-key">username</span>: <span class="yaml-str">\${{ github.actor }}</span>
           <span class="yaml-key">password</span>: <span class="yaml-str">\${{ secrets.GITHUB_TOKEN }}</span>
-      - <span class="yaml-key">name</span>: <span class="yaml-str">Atualizar o serviço</span>
+      - <span class="yaml-key">name</span>: <span class="yaml-str">Preparar e atualizar o serviço</span>
         <span class="yaml-key">run</span>: |
+          mkdir -p /srv/apps/nome-app
+          cp docker-compose.production.yml /srv/apps/nome-app/docker-compose.yml
+          rm -f /srv/apps/nome-app/.env
+          echo "NODE_ENV=production" > /srv/apps/nome-app/.env
+          echo "PORT=3000" >> /srv/apps/nome-app/.env
+          echo "DATABASE_URL=\${{ secrets.DATABASE_URL }}" >> /srv/apps/nome-app/.env
+          echo "RESEND_API_KEY=\${{ secrets.RESEND_API_KEY }}" >> /srv/apps/nome-app/.env
+          echo "CONTACT_FROM=\${{ secrets.CONTACT_FROM }}" >> /srv/apps/nome-app/.env
+          echo "CONTACT_TO=\${{ secrets.CONTACT_TO }}" >> /srv/apps/nome-app/.env
           cd /srv/apps/nome-app
           docker compose pull
           docker compose up -d --remove-orphans
@@ -1099,7 +1109,7 @@ export const setupHtml = `<div class="course-header">
     └── <span class="file">.env</span></pre>
 </div>
 <div class="tip">
-<strong>Padrão:</strong> Cada app tem uma pasta em <code>/srv/apps/</code> com o seu <code>docker-compose.yml</code> e <code>.env</code>. Para adicionar uma app nova, basta criar uma pasta e seguir os passos abaixo.
+<strong>Padrão:</strong> Na VPS só se criam as pastas em <code>/srv/apps/</code> — os ficheiros (<code>docker-compose.yml</code> e <code>.env</code>) são criados pelo runner do CI/CD no próximo <code>git push</code>. Para adicionar uma app nova, basta criar a pasta e seguir os passos abaixo.
 </div>
 </div>
 </div>
@@ -1107,43 +1117,15 @@ export const setupHtml = `<div class="course-header">
 <input type="checkbox" id="s-10-2">
 <div class="step-body">
 <span class="step-num">10.2</span>
-<div class="step-title">Criar .env da app</div>
+<div class="step-title">Criar docker-compose.production.yml no repositório</div>
 <div class="command-block">
-<code>nano /srv/apps/nome-app/.env</code>
-<span class="comment"># Criar ficheiro e colar o conteúdo abaixo</span>
+<code>nano docker-compose.production.yml</code>
+<span class="comment"># No teu computador, dentro do repositório da app. O runner copia este ficheiro para a VPS no deploy.</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 <div class="file-content">
 <div class="file-content-header">
-<span class="file-name">/srv/apps/nome-app/.env</span>
-<button type="button" class="copy-file-btn">Copiar Conteúdo</button>
-</div>
-<pre tabindex="0"><span class="bash-comment"># App environment variables</span>
-<span class="bash-keyword">NODE_ENV</span>=<span class="bash-str">production</span>
-<span class="bash-keyword">PORT</span>=<span class="bash-num">3000</span>
-<span class="bash-keyword">DATABASE_URL</span>=<span class="bash-str">postgresql://exemplo1:PALAVRA_PASSE@postgres:5432/nome_app</span>
-<span class="bash-keyword">RESEND_API_KEY</span>=<span class="bash-str">re_TROCAR</span>
-<span class="bash-keyword">CONTACT_FROM</span>=<span class="bash-str">noreply@dominio.com</span>
-<span class="bash-keyword">CONTACT_TO</span>=<span class="bash-str">contacto@dominio.com</span></pre>
-</div>
-<div class="warning">
-<strong>Substituir:</strong> substitui todos os valores <code>TROCAR</code> pelos dados reais. O <code>DATABASE_URL</code> usa o nome do contentor <code>postgres</code> como host.
-</div>
-</div>
-</div>
-<div class="setup-step">
-<input type="checkbox" id="s-10-3">
-<div class="step-body">
-<span class="step-num">10.3</span>
-<div class="step-title">Criar docker-compose.yml da app</div>
-<div class="command-block">
-<code>nano /srv/apps/nome-app/docker-compose.yml</code>
-<span class="comment"># Criar ficheiro e colar o conteúdo abaixo</span>
-<button type="button" class="copy-btn">Copiar</button>
-</div>
-<div class="file-content">
-<div class="file-content-header">
-<span class="file-name">/srv/apps/nome-app/docker-compose.yml</span>
+<span class="file-name">docker-compose.production.yml</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
 <pre tabindex="0"><span class="yaml-key">services</span>:
@@ -1163,7 +1145,31 @@ export const setupHtml = `<div class="course-header">
     <span class="yaml-key">external</span>: <span class="yaml-num">true</span></pre>
 </div>
 <div class="tip">
-<strong>Nota:</strong> se a aplicação não precisar de base de dados, remove a rede <code>data</code>. A imagem do contentor é obtida no GitHub Container Registry (GHCR).
+<strong>Nota:</strong> o ficheiro <code>.env</code> da app não se cria à mão — o runner cria-o na VPS a partir dos GitHub Secrets (configurados na Fase 9.7). Se a aplicação não precisar de base de dados, remove a rede <code>data</code>. A imagem do contentor é obtida no GitHub Container Registry (GHCR).
+</div>
+</div>
+</div>
+<div class="setup-step">
+<input type="checkbox" id="s-10-3">
+<div class="step-body">
+<span class="step-num">10.3</span>
+<div class="step-title">Fazer push — o runner cria os ficheiros e inicia a app</div>
+<div class="command-block">
+<code>git add . && git commit -m "deploy: configuração de produção" && git push</code>
+<span class="comment"># O workflow CI/CD corre e o job deploy cria os ficheiros na VPS e inicia o contentor</span>
+<button type="button" class="copy-btn">Copiar</button>
+</div>
+<div class="file-content">
+<div class="file-content-header">
+<span class="file-name">Estrutura criada pelo runner em /srv/apps/nome-app/</span>
+<button type="button" class="copy-file-btn">Copiar Conteúdo</button>
+</div>
+<pre tabindex="0"><span class="folder">/srv/apps/nome-app/</span>
+├── <span class="file">docker-compose.yml</span><span class="comment">← copiado de docker-compose.production.yml</span>
+└── <span class="file">.env</span><span class="comment">← criado a partir dos GitHub Secrets</span></pre>
+</div>
+<div class="tip">
+<strong>Verificar:</strong> depois de o workflow terminar, confirma na VPS com <code>docker ps</code> que o contentor <code>nome-app</code> está <code>Up</code> e saudável.
 </div>
 </div>
 </div>
@@ -1215,11 +1221,10 @@ export const setupHtml = `<div class="course-header">
 <input type="checkbox" id="s-10-5">
 <div class="step-body">
 <span class="step-num">10.5</span>
-<div class="step-title">Iniciar a aplicação e recarregar o proxy</div>
+<div class="step-title">Recarregar o proxy</div>
 <div class="command-block">
-<code>cd /srv/apps/nome-app && docker compose pull && docker compose up -d<br>
-cd /srv/proxy && docker exec proxy nginx -t && docker exec proxy nginx -s reload</code>
-<span class="comment"># A aplicação fica disponível na rede antes de o Nginx resolver o upstream</span>
+<code>cd /srv/proxy && docker exec proxy nginx -t && docker exec proxy nginx -s reload</code>
+<span class="comment"># O contentor já existe na rede, por isso o Nginx resolve o upstream sem erro</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 </div>
