@@ -1156,6 +1156,8 @@ PubkeyAuthentication yes</pre>
     <span class="yaml-key">image</span>: <span class="yaml-str">ghcr.io/UTILIZADOR_GITHUB/nome-app:\${TAG:-latest}</span>
     <span class="yaml-key">container_name</span>: <span class="yaml-str">nome-app</span>
     <span class="yaml-key">restart</span>: <span class="yaml-str">unless-stopped</span>
+    <span class="yaml-key">environment</span>:
+      - <span class="yaml-str">HOSTNAME=0.0.0.0</span> <span class="yaml-comment"># Next.js standalone: bind em todas as interfaces</span>
     <span class="yaml-key">env_file</span>: <span class="yaml-str">./.env</span>
     <span class="yaml-key">networks</span>:
       - <span class="yaml-str">apps</span>
@@ -1169,6 +1171,9 @@ PubkeyAuthentication yes</pre>
 </div>
 <div class="tip">
 <strong>Nota:</strong> o ficheiro <code>.env</code> da app não se cria à mão — o runner cria-o na VPS a partir dos GitHub Secrets (Fase 9.7). Se não precisares de BD, remove a rede <code>data</code>. A imagem vem do GHCR com <code>TAG</code> (git sha no deploy; default <code>latest</code>). Rollback: <code>TAG=&lt;sha_anterior&gt; docker compose up -d</code>.
+</div>
+<div class="warning">
+<strong>Porquê o <code>HOSTNAME=0.0.0.0</code>?</strong> O Next.js em modo standalone usa <code>process.env.HOSTNAME || '0.0.0.0'</code> como endereço de bind. Dentro de um container, o Docker define <code>HOSTNAME</code> como o ID do container — sem esta variável, o servidor só fica a escutar no IP da eth0 e o healthcheck a <code>127.0.0.1</code> falha. Define-a no <code>environment</code> do Compose (sobrepõe-se ao valor que o runtime injeta).
 </div>
 </div>
 </div>

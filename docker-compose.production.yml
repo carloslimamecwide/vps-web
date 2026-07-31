@@ -3,6 +3,8 @@ services:
     image: ghcr.io/carloslimamecwide/vps-web:${TAG:-latest}
     container_name: vps-web
     restart: unless-stopped
+    environment:
+      - HOSTNAME=0.0.0.0
     networks:
       - apps
     healthcheck:

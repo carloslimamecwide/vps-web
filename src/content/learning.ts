@@ -785,6 +785,7 @@ export const learningHtml = `<div class="course-header">
 
 <span class="bash-keyword">EXPOSE</span> <span class="bash-num">3000</span>
 <span class="bash-keyword">ENV</span> PORT=3000
+<span class="bash-keyword">ENV</span> HOSTNAME=0.0.0.0
 
 <span class="bash-keyword">HEALTHCHECK</span> --interval=30s --timeout=5s --start-period=20s --retries=3 <span class="bash-keyword">CMD</span> node -e "fetch('http://127.0.0.1:3000').then((r)=&gt;process.exit(r.ok?0:1)).catch(()=&gt;process.exit(1))"
 
@@ -815,6 +816,9 @@ export const learningHtml = `<div class="course-header">
 <tr><td><code>ENV</code></td><td>Variável de ambiente</td><td><code>ENV NODE_ENV=production</code></td></tr>
 </tbody>
 </table>
+<div class="tip">
+<strong>Gotcha do <code>HOSTNAME</code>:</strong> dentro de um container, o runtime do Docker define <code>HOSTNAME</code> como o ID do container. O <code>server.js</code> standalone usa <code>process.env.HOSTNAME || '0.0.0.0'</code> como endereço de bind — sem <code>ENV HOSTNAME=0.0.0.0</code>, o servidor fica a escutar apenas no IP da eth0 e o healthcheck a <code>127.0.0.1</code> falha.
+</div>
 </div>
 
 <div class="subsection" id="dockerfile-4">
