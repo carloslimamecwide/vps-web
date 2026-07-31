@@ -1,4 +1,4 @@
-# Criei o guia de DevOps que gostava de ter encontrado quando comecei
+# Criei um guia prático de DevOps para iniciantes
 
 Quando comecei a explorar DevOps, encontrei muita documentação útil — mas espalhada por dezenas de páginas, vídeos e ferramentas. Faltava-me um recurso simples que ligasse os conceitos e mostrasse uma sequência prática para começar.
 

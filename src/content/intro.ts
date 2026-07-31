@@ -8,7 +8,7 @@ export const introHtml = `<nav class="intro-nav">
 
 <div class="intro-hero">
 <p class="intro-eyebrow">guia prático para iniciantes</p>
-<h1>O guia de DevOps que gostava de ter encontrado quando comecei</h1>
+<h1>O guia de DevOps para iniciantes</h1>
 <p class="intro-lead">Um percurso introdutório, gratuito e orientado à prática para ligar conceitos que muitas vezes aparecem dispersos: Linux, SSH, Docker, Compose, CI/CD, segurança e reverse proxy num VPS.</p>
 </div>
 
