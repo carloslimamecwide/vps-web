@@ -15,8 +15,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: "npm"
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
@@ -44,7 +44,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=
+            type=sha,format=short,prefix=
             type=raw,value=latest
       - uses: docker/build-push-action@v6
         with:
@@ -69,4 +69,20 @@ jobs:
           cd /srv/apps/vps-web
           docker compose pull
           docker compose up -d --remove-orphans
-          docker image prune -f
+          docker compose ps
+          # smoke: espera healthy até ~90s
+          for i in $(seq 1 18); do
+            status=$(docker inspect --format='{{.State.Health.Status}}' vps-web 2>/dev/null || echo starting)
+            echo "health=$status ($i)"
+            if [ "$status" = "healthy" ]; then
+              exit 0
+            fi
+            if [ "$status" = "unhealthy" ]; then
+              docker logs --tail 80 vps-web || true
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "timeout waiting for healthy"
+          docker logs --tail 80 vps-web || true
+          exit 1

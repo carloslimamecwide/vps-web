@@ -750,7 +750,7 @@ export const learningHtml = `<div class="course-header">
 <span class="file-name">Dockerfile (exemplo Next.js)</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="bash-comment"># --- Phase 1: Build ---</span>
+<pre tabindex="0"><span class="bash-comment"># --- Fase 1: Build ---</span>
 <span class="bash-keyword">FROM</span> node:24-alpine <span class="bash-keyword">AS</span> builder
 
 <span class="bash-comment"># Definir diretório de trabalho</span>
@@ -765,23 +765,29 @@ export const learningHtml = `<div class="course-header">
 <span class="bash-comment"># Copiar código fonte</span>
 <span class="bash-keyword">COPY</span> . .
 
-<span class="bash-comment"># Build da aplicação</span>
+<span class="bash-comment"># Build (requer output: "standalone" no next.config)</span>
 <span class="bash-keyword">RUN</span> npm run build
 
-<span class="bash-comment"># --- Phase 2: Production ---</span>
+<span class="bash-comment"># --- Fase 2: Produção ---</span>
 <span class="bash-keyword">FROM</span> node:24-alpine
 
 <span class="bash-keyword">WORKDIR</span> /app
+<span class="bash-keyword">ENV</span> NODE_ENV=production
 
-<span class="bash-comment"># Copiar apenas o necessário do builder</span>
-<span class="bash-keyword">COPY</span> --from=builder /app/.next/standalone ./
-<span class="bash-keyword">COPY</span> --from=builder /app/public ./public
-<span class="bash-keyword">COPY</span> --from=builder /app/.next/static ./.next/static
+<span class="bash-comment"># Utilizador sem privilégios root</span>
+<span class="bash-keyword">RUN</span> addgroup --system --gid 1001 nodejs &amp;&amp; adduser --system --uid 1001 nextjs
 
-<span class="bash-comment"># Expor porta</span>
+<span class="bash-comment"># Standalone com dono correto (omite public/ se o projeto não tiver)</span>
+<span class="bash-keyword">COPY</span> --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+<span class="bash-keyword">COPY</span> --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+<span class="bash-keyword">USER</span> nextjs
+
 <span class="bash-keyword">EXPOSE</span> <span class="bash-num">3000</span>
+<span class="bash-keyword">ENV</span> PORT=3000
 
-<span class="bash-comment"># Comando para arrancar</span>
+<span class="bash-keyword">HEALTHCHECK</span> --interval=30s --timeout=5s --start-period=20s --retries=3 <span class="bash-keyword">CMD</span> node -e "fetch('http://127.0.0.1:3000').then((r)=&gt;process.exit(r.ok?0:1)).catch(()=&gt;process.exit(1))"
+
 <span class="bash-keyword">CMD</span> [<span class="bash-str">"node"</span>, <span class="bash-str">"server.js"</span>]</pre>
 </div>
 </div>
@@ -799,12 +805,13 @@ export const learningHtml = `<div class="course-header">
 </tr>
 </thead>
 <tbody>
-<tr><td><code>FROM</code></td><td>Image base</td><td><code>FROM node:24-alpine</code></td></tr>
+<tr><td><code>FROM</code></td><td>Imagem base</td><td><code>FROM node:24-alpine</code></td></tr>
 <tr><td><code>WORKDIR</code></td><td>Diretório de trabalho</td><td><code>WORKDIR /app</code></td></tr>
-<tr><td><code>COPY</code></td><td>Copia ficheiros para a image</td><td><code>COPY . .</code></td></tr>
-<tr><td><code>RUN</code></td><td>Executa comando durante build</td><td><code>RUN npm install</code></td></tr>
+<tr><td><code>COPY</code></td><td>Copia ficheiros para a imagem</td><td><code>COPY . .</code></td></tr>
+<tr><td><code>RUN</code></td><td>Executa comando durante build</td><td><code>RUN npm ci</code></td></tr>
+<tr><td><code>USER</code></td><td>Corre o processo sem root</td><td><code>USER nextjs</code></td></tr>
 <tr><td><code>EXPOSE</code></td><td>Documenta porta (não abre!)</td><td><code>EXPOSE 3000</code></td></tr>
-<tr><td><code>CMD</code></td><td>Comando ao arrancar container</td><td><code>CMD ["node","server.js"]</code></td></tr>
+<tr><td><code>CMD</code></td><td>Comando ao arrancar o contentor</td><td><code>CMD ["node","server.js"]</code></td></tr>
 <tr><td><code>ENV</code></td><td>Variável de ambiente</td><td><code>ENV NODE_ENV=production</code></td></tr>
 </tbody>
 </table>
@@ -815,15 +822,15 @@ export const learningHtml = `<div class="course-header">
                         <label class="lesson-done"><input type="checkbox" id="learn-dockerfile-4"><span>Concluída</span></label>
 
 <p style="color: var(--text-secondary); line-height: 1.8;">
-<strong>Porquê?</strong> Uma image de build (com compilar, dependências de dev) pode ter GBs. A image final (só o que precisas para correr) pode ter MBs.
+<strong>Porquê?</strong> Uma imagem de build (compilação e dependências de desenvolvimento) pode ser grande. A imagem final com output <code>standalone</code> fica muito mais pequena e corre sem root.
 </p>
 <div class="architecture-diagram">
-<span class="highlight">Stage 1: builder</span><span class="highlight">Stage 2: production</span>
+<span class="highlight">Fase 1: builder</span><span class="highlight">Fase 2: produção</span>
             
  node:24-alpine                    node:24-alpine       
- + npm ci (deps)        COPY  + server.js          
- + npm run build        (só o     + node_modules.min   
- + código fonte         necessário) = ~50MB (vs ~500MB)  
+ + npm ci               COPY   + .next/standalone  
+ + npm run build        (só o  + .next/static      
+ + código fonte         necessário) + USER nextjs  
 </div>
 </div>
 
@@ -1188,7 +1195,7 @@ README.md</pre>
 </div>
 
 <div class="subsection" id="docker-deploy-2">
-<h3> Comparação de Registries</h3>
+<h3> Comparação de registos</h3>
                         <label class="lesson-done"><input type="checkbox" id="learn-docker-deploy-2"><span>Concluída</span></label>
 
 <table>
@@ -1264,7 +1271,7 @@ README.md</pre>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 <div class="tip">
-<strong>Dica:</strong> Usa tags versionadas (<code>v1.2.3</code>) em produção. O <code>latest</strong> é conveniente mas pode causar problemas de rollbacks.
+<strong>Dica:</strong> Em produção prefere tags imutáveis (<code>git sha</code> ou <code>v1.2.3</code>). O <code>latest</code> é conveniente no laboratório, mas dificulta rollbacks. Neste guia o pipeline publica <code>sha</code> e <code>latest</code>.
 </div>
 </div>
 
@@ -1347,7 +1354,7 @@ README.md</pre>
 </div>
 
 <p style="color: var(--text-secondary); line-height: 1.8;">
-                            Usar Docker para bases de dados é a melhor opção: isolamento, portabilidade, backup fácil, e não polui o sistema operativo.
+                            Usar Docker para bases de dados é uma boa opção em laboratório e em single-node: isolamento, portabilidade, backups simples e menos poluição do sistema operativo. Em produção de longa duração, muitas equipas preferem uma base gerida (RDS, Cloud SQL, etc.).
 </p>
 
 <div class="file-content">
@@ -1512,7 +1519,7 @@ JOIN orders ON users.id = orders.user_id;</code>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 <div class="command-block">
-<code>docker exec -i postgres pg_restore -U exemplo1 -d exemplo1 < /tmp/backup.dump</code>
+<code>docker exec -i postgres pg_restore -U exemplo1 -d exemplo1 &lt; /tmp/backup.dump</code>
 <span class="comment"># Restaurar backup</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
@@ -1650,7 +1657,7 @@ find <span class="bash-str">$BACKUP_DIR</span> -name "*.dump" -mtime +14 -delete
       - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/checkout@v4</span>
       - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/setup-node@v4</span>
         <span class="yaml-key">with</span>:
-          <span class="yaml-key">node-version</span>: <span class="yaml-str">"22"</span>
+          <span class="yaml-key">node-version</span>: <span class="yaml-str">"24"</span>
           <span class="yaml-key">cache</span>: <span class="yaml-str">npm</span>
       - <span class="yaml-key">run</span>: <span class="yaml-str">npm ci</span>
       - <span class="yaml-key">run</span>: <span class="yaml-str">npm run lint</span>
@@ -1674,7 +1681,9 @@ find <span class="bash-str">$BACKUP_DIR</span> -name "*.dump" -mtime +14 -delete
         <span class="yaml-key">with</span>:
           <span class="yaml-key">context</span>: <span class="yaml-str">.</span>
           <span class="yaml-key">push</span>: <span class="yaml-num">true</span>
-          <span class="yaml-key">tags</span>: <span class="yaml-str">ghcr.io/\${{ github.repository }}:latest</span>
+          <span class="yaml-key">tags</span>: |
+            <span class="yaml-str">ghcr.io/\${{ github.repository }}:\${{ github.sha }}</span>
+            <span class="yaml-str">ghcr.io/\${{ github.repository }}:latest</span>
 
   <span class="yaml-key">deploy</span>:
     <span class="yaml-key">needs</span>: <span class="yaml-str">build</span>
@@ -1689,6 +1698,8 @@ find <span class="bash-str">$BACKUP_DIR</span> -name "*.dump" -mtime +14 -delete
           <span class="yaml-key">username</span>: <span class="yaml-str">\${{ github.actor }}</span>
           <span class="yaml-key">password</span>: <span class="yaml-str">\${{ secrets.GITHUB_TOKEN }}</span>
       - <span class="yaml-key">name</span>: <span class="yaml-str">Atualizar o serviço</span>
+        <span class="yaml-key">env</span>:
+          <span class="yaml-key">TAG</span>: <span class="yaml-str">\${{ github.sha }}</span>
         <span class="yaml-key">run</span>: |
           cd /srv/apps/nome-app
           docker compose pull
@@ -1809,10 +1820,10 @@ find <span class="bash-str">$BACKUP_DIR</span> -name "*.dump" -mtime +14 -delete
 <h4>Reversão manual (se necessário)</h4>
 <div class="command-block">
 <code>cd /srv/apps/nome-app<br>
-IMAGE_TAG=TAG_ANTERIOR docker compose pull<br>
-IMAGE_TAG=TAG_ANTERIOR docker compose up -d<br>
+TAG=TAG_ANTERIOR docker compose pull<br>
+TAG=TAG_ANTERIOR docker compose up -d<br>
 docker compose ps</code>
-<span class="comment"># Requer image: ghcr.io/organizacao/app:\${IMAGE_TAG:-latest} no Compose</span>
+<span class="comment"># TAG_ANTERIOR = git sha no GHCR. Compose: image: ...:\${TAG:-latest}</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 
@@ -1909,10 +1920,10 @@ docker images | grep nome-app</code>
 
 <div class="command-block">
 <code># No docker-compose.yml, parametriza a tag<br>
-image: ghcr.io/organizacao/app:\${IMAGE_TAG:-latest}<br><br>
+image: ghcr.io/organizacao/app:\${TAG:-latest}<br><br>
 # No terminal, escolhe uma tag imutável anterior<br>
-IMAGE_TAG=TAG_ANTERIOR docker compose pull<br>
-IMAGE_TAG=TAG_ANTERIOR docker compose up -d</code>
+TAG=TAG_ANTERIOR docker compose pull<br>
+TAG=TAG_ANTERIOR docker compose up -d</code>
 <span class="comment"># Substitui TAG_ANTERIOR por uma tag que exista no registo</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>

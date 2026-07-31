@@ -21,7 +21,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Guia Prático de DevOps para Iniciantes",
   description:
-    "Percurso introdutório e laboratório orientado de Linux, Docker, CI/CD, segurança e reverse proxy num VPS.",
+    "Conceitos até reverse proxy e laboratório VPS completo: Linux, Docker, CI/CD, segurança, Nginx e deploy.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

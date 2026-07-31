@@ -258,13 +258,29 @@ export const setupHtml = `<div class="course-header">
 <div class="step-body">
 <span class="step-num">3.6</span>
 <div class="step-title">Hardening de SSH — desativar a autenticação por palavra-passe após validar a chave SSH</div>
+<div class="step-desc">Mantém outra sessão SSH aberta. Só continua se <code>ssh utilizador-exemplo@IP_DO_VPS</code> entrar com chave e sem palavra-passe.</div>
 <div class="command-block">
 <code>nano /etc/ssh/sshd_config</code>
-<span class="comment"># Alterar PasswordAuthentication e, depois, reiniciar o serviço SSH</span>
+<span class="comment"># Garante (ou acrescenta) as linhas abaixo; evita duplicados contraditórios</span>
+<button type="button" class="copy-btn">Copiar</button>
+</div>
+<div class="file-content">
+<div class="file-content-header">
+<span class="file-name">Trecho a confirmar em /etc/ssh/sshd_config</span>
+<button type="button" class="copy-file-btn">Copiar Conteúdo</button>
+</div>
+<pre tabindex="0">PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+PubkeyAuthentication yes</pre>
+</div>
+<div class="command-block">
+<code>sshd -t &amp;&amp; systemctl restart ssh</code>
+<span class="comment"># Valida a config e reinicia o SSH (Ubuntu: serviço ssh)</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 <div class="warning">
-<strong>Atenção ao Docker e ao UFW:</strong> quando publicas uma porta com Docker, o tráfego pode não seguir as regras normais do UFW. Publica apenas 80/443 no proxy; mantém serviços internos sem <code>ports</code> no Compose e complementa a proteção com a firewall do fornecedor ou regras verificadas na cadeia <code>DOCKER-USER</code>.
+<strong>Antes de fechares a sessão atual:</strong> testa noutra janela se ainda consegues entrar com a chave. Se falhar, corrige a config nesta sessão ainda aberta.
 </div>
 </div>
 </div>
@@ -332,6 +348,9 @@ export const setupHtml = `<div class="course-header">
 </div>
 <div class="danger">
 <strong>Privilégio elevado:</strong> pertencer ao grupo <code>docker</code> permite, na prática, obter acesso equivalente a root. Limita este grupo a contas de confiança e não executes workflows de contribuições não confiáveis num runner com acesso ao Docker.
+</div>
+<div class="warning">
+<strong>Atenção ao Docker e ao UFW:</strong> quando publicas uma porta com Docker, o tráfego pode não seguir as regras normais do UFW. Publica apenas 80/443 no proxy; mantém serviços internos sem <code>ports</code> no Compose e complementa a proteção com a firewall do fornecedor ou regras verificadas na cadeia <code>DOCKER-USER</code>.
 </div>
 </div>
 </div>
@@ -1007,7 +1026,7 @@ export const setupHtml = `<div class="course-header">
       - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/checkout@v4</span>
       - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/setup-node@v4</span>
         <span class="yaml-key">with</span>:
-          <span class="yaml-key">node-version</span>: <span class="yaml-str">"22"</span>
+          <span class="yaml-key">node-version</span>: <span class="yaml-str">"24"</span>
           <span class="yaml-key">cache</span>: <span class="yaml-str">npm</span>
       - <span class="yaml-key">run</span>: <span class="yaml-str">npm ci</span>
       - <span class="yaml-key">run</span>: <span class="yaml-str">npm run lint</span>
@@ -1031,7 +1050,9 @@ export const setupHtml = `<div class="course-header">
         <span class="yaml-key">with</span>:
           <span class="yaml-key">context</span>: <span class="yaml-str">.</span>
           <span class="yaml-key">push</span>: <span class="yaml-num">true</span>
-          <span class="yaml-key">tags</span>: <span class="yaml-str">ghcr.io/\${{ github.repository }}:latest</span>
+          <span class="yaml-key">tags</span>: |
+            <span class="yaml-str">ghcr.io/\${{ github.repository }}:\${{ github.sha }}</span>
+            <span class="yaml-str">ghcr.io/\${{ github.repository }}:latest</span>
 
   <span class="yaml-key">deploy</span>:
     <span class="yaml-key">needs</span>: <span class="yaml-str">build</span>
@@ -1047,6 +1068,8 @@ export const setupHtml = `<div class="course-header">
           <span class="yaml-key">username</span>: <span class="yaml-str">\${{ github.actor }}</span>
           <span class="yaml-key">password</span>: <span class="yaml-str">\${{ secrets.GITHUB_TOKEN }}</span>
       - <span class="yaml-key">name</span>: <span class="yaml-str">Preparar e atualizar o serviço</span>
+        <span class="yaml-key">env</span>:
+          <span class="yaml-key">TAG</span>: <span class="yaml-str">\${{ github.sha }}</span>
         <span class="yaml-key">run</span>: |
           mkdir -p /srv/apps/nome-app
           cp docker-compose.production.yml /srv/apps/nome-app/docker-compose.yml
@@ -1130,7 +1153,7 @@ export const setupHtml = `<div class="course-header">
 </div>
 <pre tabindex="0"><span class="yaml-key">services</span>:
   <span class="yaml-key">app</span>:
-    <span class="yaml-key">image</span>: <span class="yaml-str">ghcr.io/UTILIZADOR_GITHUB/nome-app:latest</span>
+    <span class="yaml-key">image</span>: <span class="yaml-str">ghcr.io/UTILIZADOR_GITHUB/nome-app:\${TAG:-latest}</span>
     <span class="yaml-key">container_name</span>: <span class="yaml-str">nome-app</span>
     <span class="yaml-key">restart</span>: <span class="yaml-str">unless-stopped</span>
     <span class="yaml-key">env_file</span>: <span class="yaml-str">./.env</span>
@@ -1145,7 +1168,7 @@ export const setupHtml = `<div class="course-header">
     <span class="yaml-key">external</span>: <span class="yaml-num">true</span></pre>
 </div>
 <div class="tip">
-<strong>Nota:</strong> o ficheiro <code>.env</code> da app não se cria à mão — o runner cria-o na VPS a partir dos GitHub Secrets (configurados na Fase 9.7). Se a aplicação não precisar de base de dados, remove a rede <code>data</code>. A imagem do contentor é obtida no GitHub Container Registry (GHCR).
+<strong>Nota:</strong> o ficheiro <code>.env</code> da app não se cria à mão — o runner cria-o na VPS a partir dos GitHub Secrets (Fase 9.7). Se não precisares de BD, remove a rede <code>data</code>. A imagem vem do GHCR com <code>TAG</code> (git sha no deploy; default <code>latest</code>). Rollback: <code>TAG=&lt;sha_anterior&gt; docker compose up -d</code>.
 </div>
 </div>
 </div>

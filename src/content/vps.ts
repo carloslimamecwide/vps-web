@@ -154,7 +154,7 @@ export const vpsHtml = `<div class="course-header">
 
 <div class="command-block">
 <code>docker pull ghcr.io/UTILIZADOR_GITHUB/exemplo1:latest</code>
-<span class="comment"># Puxar imagem do GHCR</span>
+<span class="comment"># Lab: latest. Rollback/produção: prefere o git sha publicado no GHCR</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 
@@ -330,33 +330,37 @@ CREATE TABLE utilizadores (
 <div class="subsection">
 <h3> Backup e restauro</h3>
                     
+<div class="tip">
+<strong>Paths:</strong> o redirecionamento <code>&gt; ficheiro</code> grava no <strong>host</strong>. O contentor só vê ficheiros sob o volume montado (ex.: <code>/srv/db/backups</code> → <code>/backups</code>). Para restaurar a partir do host, usa stdin (<code>&lt; ficheiro.dump</code>).
+</div>
+
 <div class="command-block">
-<code>docker exec -i postgres pg_dump -U exemplo1 -Fc exemplo2 > /tmp/exemplo2_backup.dump</code>
-<span class="comment"># Backup manual</span>
+<code>docker exec -i postgres pg_dump -U exemplo1 -Fc exemplo2 > /srv/db/backups/exemplo2_backup.dump</code>
+<span class="comment"># Backup manual no host (pasta montada em /backups)</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 
 <div class="command-block">
-<code>docker exec -i postgres pg_dumpall -U exemplo1 > /tmp/all_databases.sql</code>
+<code>docker exec -i postgres pg_dumpall -U exemplo1 > /srv/db/backups/all_databases.sql</code>
 <span class="comment"># Cópia de segurança de todas as bases de dados</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 
 <div class="command-block">
-<code>docker exec -i postgres pg_restore -U exemplo1 -d exemplo2 /backups/exemplo2_20260726_020001.dump</code>
-<span class="comment"># Restaurar backup</span>
+<code>docker exec -i postgres pg_restore -U exemplo1 -d exemplo2 -c &lt; /srv/db/backups/exemplo2_backup.dump</code>
+<span class="comment"># Restaurar via stdin a partir do host</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 
 <div class="command-block">
-<code>docker exec -i postgres pg_restore -U exemplo1 -d exemplo2 -c /backups/exemplo2.dump</code>
-<span class="comment"># Restaurar (limpar antes)</span>
+<code>docker exec -i postgres pg_restore -U exemplo1 -d exemplo2 -c /backups/exemplo2_backup.dump</code>
+<span class="comment"># Alternativa: path dentro do contentor (volume ./backups:/backups)</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 
 <div class="command-block">
 <code>ls -lh /srv/db/backups/</code>
-<span class="comment"># Ver backups disponíveis</span>
+<span class="comment"># Ver backups disponíveis no host</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 </div>
@@ -1070,11 +1074,11 @@ systemctl status actions.runner.*.service</code>
 </div>
 <div class="quick-ref-card">
 <h4> Backup manual</h4>
-<code>docker exec -i postgres pg_dump -U exemplo1 -Fc x > /tmp/x.dump</code>
+<code>docker exec -i postgres pg_dump -U exemplo1 -Fc x > /srv/db/backups/x.dump</code>
 </div>
 <div class="quick-ref-card">
 <h4> Restaurar backup</h4>
-<code>docker exec -i postgres pg_restore -U exemplo1 -d x /backups/x.dump</code>
+<code>docker exec -i postgres pg_restore -U exemplo1 -d x -c &lt; /srv/db/backups/x.dump</code>
 </div>
 <div class="quick-ref-card">
 <h4> Verificar rede</h4>
