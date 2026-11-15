@@ -1,88 +1,63 @@
-name: Build & Deploy
+name: Build & Publish - Barbearia
 
 on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ghcr.io/carloslimamecwide/barber-template
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Obter o código
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: "npm"
+          cache: npm
+
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
 
   build:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     permissions:
       contents: read
       packages: write
-    outputs:
-      sha: ${{ steps.sha.outputs.value }}
+
     steps:
-      - uses: actions/checkout@v4
-      - id: sha
-        run: echo "value=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - name: Obter o código
+        uses: actions/checkout@v4
         with:
-          registry: ${{ env.REGISTRY }}
+          persist-credentials: false
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Autenticar no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,format=short,prefix=
-            type=raw,value=latest
-      - uses: docker/build-push-action@v6
+
+      - name: Construir e publicar a imagem
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy:
-    needs: build
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy to VPS
-        env:
-          TAG: ${{ needs.build.outputs.sha }}
-        run: |
-          mkdir -p /srv/apps/vps-web
-          cp docker-compose.production.yml /srv/apps/vps-web/docker-compose.yml
-          cd /srv/apps/vps-web
-          docker compose pull
-          docker compose up -d --remove-orphans
-          docker compose ps
-          # smoke: espera healthy até ~90s
-          for i in $(seq 1 18); do
-            status=$(docker inspect --format='{{.State.Health.Status}}' vps-web 2>/dev/null || echo starting)
-            echo "health=$status ($i)"
-            if [ "$status" = "healthy" ]; then
-              exit 0
-            fi
-            if [ "$status" = "unhealthy" ]; then
-              docker logs --tail 80 vps-web || true
-              exit 1
-            fi
-            sleep 5
-          done
-          echo "timeout waiting for healthy"
-          docker logs --tail 80 vps-web || true
-          exit 1
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}

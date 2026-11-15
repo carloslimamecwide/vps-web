@@ -12,5 +12,5 @@ Não pretende substituir a documentação oficial nem propor uma arquitetura uni
 
 Se estás a começar, experimenta-o — e partilha-o com alguém que também esteja a dar os primeiros passos.
 
-👉 [LIGAÇÃO_DO_CURSO]
-👉 Repo: [LIGAÇÃO_DO_REPO]
+👉 https://devops.webfusionlab.pt
+👉 Repo: https://github.com/carloslimamecwide/vps-web
