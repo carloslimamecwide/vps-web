@@ -1,4 +1,4 @@
-name: Build & Publish - Barbearia
+name: Build & Publish - VPS Web
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: ghcr.io/carloslimamecwide/barber-template
+  IMAGE_NAME: ghcr.io/carloslimamecwide/vps-web
 
 jobs:
   test:
