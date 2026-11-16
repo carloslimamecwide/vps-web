@@ -12,7 +12,7 @@ env:
 
 jobs:
   test:
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Obter o código
@@ -32,7 +32,7 @@ jobs:
 
   build:
     needs: test
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
