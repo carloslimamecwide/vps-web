@@ -64,4 +64,4 @@ MIT — ver [LICENSE](./LICENSE).
 
 ## Contribuições
 
-Correções e sugestões são bem-vindas.
+
