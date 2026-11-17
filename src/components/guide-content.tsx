@@ -7,6 +7,7 @@ import parse, {
 } from "html-react-parser";
 import { CollapsibleBlock } from "@/components/collapsible-block";
 import { CopyButton } from "@/components/copy-button";
+import { GuideIcon } from "@/components/guide-icon";
 import { ProgressCheckbox } from "@/components/progress-checkbox";
 import { progressStoreForCheckbox } from "@/lib/guides";
 import type { GuideId } from "@/types/course";
@@ -44,6 +45,10 @@ function createParserOptions(guideId: GuideId): HTMLReactParserOptions {
 
   options.replace = (node, index) => {
     if (!(node instanceof Element)) return;
+
+    if (hasClass(node, "toggle-icon")) {
+      return <GuideIcon key={`toggle-${index}`} name="chevron-down" className="toggle-icon" />;
+    }
 
     if (hasClass(node, "copy-btn")) {
       return <CopyButton key={`copy-command-${index}`} kind="command" />;

@@ -1,4 +1,6 @@
-// Generated from guia-vps.html by scripts/migrate-source.mjs.
+import { escapeCode } from "@/lib/code-example";
+import { appCompose, laboratoryWorkflow, postgresBackupScript, postgresCompose, postgresRestoreScript } from "@/content/operation-examples";
+
 export const setupHtml = `<div class="course-header">
 <h2> Configuração inicial do VPS</h2>
 <p>Laboratório orientado e sequencial para configurar um VPS descartável. As dez fases fazem parte da configuração e devem ser concluídas pela ordem apresentada.</p>
@@ -736,24 +738,16 @@ PubkeyAuthentication yes</pre>
 <input type="checkbox" id="s-8-2">
 <div class="step-body">
 <span class="step-num">8.2</span>
-<div class="step-title">Criar .env do PostgreSQL</div>
+<div class="step-title">Preparar o secret do PostgreSQL</div>
 <div class="command-block">
-<code>nano /srv/db/.env</code>
-<span class="comment"># Criar ficheiro e colar o conteúdo abaixo</span>
+<code>install -d -m 700 /srv/secrets<br>
+(umask 077; set -o noclobber; openssl rand -base64 32 &gt; /srv/secrets/postgres_password)</code>
+<span class="comment"># Uma vez, como root; recusa sobrescrever um secret existente</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
-<div class="file-content">
-<div class="file-content-header">
-<span class="file-name">/srv/db/.env</span>
-<button type="button" class="copy-file-btn">Copiar Conteúdo</button>
-</div>
-<pre tabindex="0"><span class="yaml-comment"># PostgreSQL credentials</span>
-<span class="bash-keyword">POSTGRES_DB</span>=<span class="bash-str">exemplo1</span>
-<span class="bash-keyword">POSTGRES_USER</span>=<span class="bash-str">exemplo1</span>
-<span class="bash-keyword">POSTGRES_PASSWORD</span>=<span class="bash-str">SUBSTITUIR_POR_PALAVRA_PASSE_FORTE</span></pre>
-</div>
-<div class="warning">
-<strong>Importante:</strong> substitui <code>SUBSTITUIR_POR_PALAVRA_PASSE_FORTE</code> por uma palavra-passe forte. Esta palavra-passe é usada para estabelecer ligação à base de dados.
+<div class="tip">
+<p>O Compose abaixo fornece a palavra-passe através de <code>POSTGRES_PASSWORD_FILE</code>. O ficheiro fica fora do repositório e só é montado no serviço PostgreSQL.</p>
+<div class="warning"><strong>Secret de laboratório:</strong> este ficheiro local tem permissões restritas. Num ambiente duradouro, obtém o valor de um secret manager. Não regeneres o ficheiro num cluster existente: a imagem só define a palavra-passe na inicialização da base de dados.</div>
 </div>
 </div>
 </div>
@@ -772,30 +766,7 @@ PubkeyAuthentication yes</pre>
 <span class="file-name">/srv/db/docker-compose.yml</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="yaml-key">services</span>:
-  <span class="yaml-key">postgres</span>:
-    <span class="yaml-key">image</span>: <span class="yaml-str">postgres:16-alpine</span>
-    <span class="yaml-key">container_name</span>: <span class="yaml-str">postgres</span>
-    <span class="yaml-key">restart</span>: <span class="yaml-str">unless-stopped</span>
-    <span class="yaml-key">env_file</span>: <span class="yaml-str">./.env</span>
-    <span class="yaml-key">ports</span>:
-      - <span class="yaml-str">"127.0.0.1:5432:5432"</span> <span class="yaml-comment"># Só local, não exposto à internet</span>
-    <span class="yaml-key">volumes</span>:
-      - <span class="yaml-str">./data:/var/lib/postgresql/data</span>
-      - <span class="yaml-str">./backups:/backups</span>
-    <span class="yaml-key">networks</span>:
-      - <span class="yaml-str">data</span>
-    <span class="yaml-key">mem_limit</span>: <span class="yaml-num">1g</span>
-    <span class="yaml-key">cpus</span>: <span class="yaml-num">1.0</span>
-    <span class="yaml-key">healthcheck</span>:
-      <span class="yaml-key">test</span>: [<span class="yaml-str">"CMD-SHELL"</span>, <span class="yaml-str">"pg_isready -U exemplo1"</span>]
-      <span class="yaml-key">interval</span>: <span class="yaml-num">10s</span>
-      <span class="yaml-key">timeout</span>: <span class="yaml-num">5s</span>
-      <span class="yaml-key">retries</span>: <span class="yaml-num">5</span>
-
-<span class="yaml-key">networks</span>:
-  <span class="yaml-key">data</span>:
-    <span class="yaml-key">external</span>: <span class="yaml-num">true</span></pre>
+<pre tabindex="0">${escapeCode(postgresCompose)}</pre>
 </div>
 </div>
 </div>
@@ -805,7 +776,7 @@ PubkeyAuthentication yes</pre>
 <span class="step-num">8.4</span>
 <div class="step-title">Iniciar PostgreSQL</div>
 <div class="command-block">
-<code>cd /srv/db && docker compose up -d</code>
+<code>cd /srv/db &amp;&amp; docker compose up --wait --wait-timeout 120</code>
 <span class="comment"># Aguardar container healthy</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
@@ -838,24 +809,7 @@ PubkeyAuthentication yes</pre>
 <span class="file-name">/srv/db/scripts/backup.sh</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="bash-comment">#!/bin/bash</span>
-<span class="bash-comment"># PostgreSQL backup script</span>
-<span class="bash-comment"># Runs daily at 02:00 via cron</span>
-
-<span class="bash-keyword">BACKUP_DIR</span>=<span class="bash-str">"/srv/db/backups"</span>
-<span class="bash-keyword">TIMESTAMP</span>=<span class="bash-str">$(date +%Y%m%d_%H%M%S)</span>
-<span class="bash-keyword">RETENTION_DAYS</span>=<span class="bash-num">14</span>
-
-<span class="bash-comment"># Create backup directory if needed</span>
-<span class="bash-keyword">mkdir</span> -p <span class="bash-str">"$BACKUP_DIR"</span>
-
-<span class="bash-comment"># Cópia de segurança de todas as bases de dados</span>
-<span class="bash-keyword">docker</span> exec -t postgres pg_dumpall -U exemplo1 | gzip > <span class="bash-str">"$BACKUP_DIR/all_databases_\${TIMESTAMP}.dump"</span>
-
-<span class="bash-comment"># Remove backups older than retention period</span>
-<span class="bash-keyword">find</span> <span class="bash-str">"$BACKUP_DIR"</span> -name <span class="bash-str">"*.dump"</span> -mtime +<span class="bash-num">$RETENTION_DAYS</span> -delete
-
-<span class="bash-keyword">echo</span> <span class="bash-str">"[$(date)] Backup completed: all_databases_\${TIMESTAMP}.dump"</span></pre>
+<pre tabindex="0">${escapeCode(postgresBackupScript)}</pre>
 </div>
 </div>
 </div>
@@ -898,10 +852,10 @@ PubkeyAuthentication yes</pre>
 <input type="checkbox" id="s-8-9">
 <div class="step-body">
 <span class="step-num">8.9</span>
-<div class="step-title">Definir permissões data/</div>
+<div class="step-title">Verificar as permissões geridas pela imagem</div>
 <div class="command-block">
-<code>chown -R 10001:0 /srv/db/data && chmod 700 /srv/db/data</code>
-<span class="comment"># Permissões PostgreSQL</span>
+<code>docker exec postgres sh -c 'id postgres; stat -c "%u:%g %a %n" "$PGDATA"'</code>
+<span class="comment"># Consulta apenas; não alteres o dono dos dados com o PostgreSQL em execução</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 </div>
@@ -910,12 +864,21 @@ PubkeyAuthentication yes</pre>
 <input type="checkbox" id="s-8-10">
 <div class="step-body">
 <span class="step-num">8.10</span>
-<div class="step-title">Testar backup manual</div>
+<div class="step-title">Testar backup e restauro isolado</div>
 <div class="command-block">
 <code>/srv/db/scripts/backup.sh</code>
-<span class="comment"># Executar e verificar /srv/db/backups/</span>
+<span class="comment"># Só anuncia sucesso depois de validar e publicar o .sql.gz</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
+
+<p>Guarda o script seguinte em <code>/srv/db/scripts/restore-check.sh</code>. Executa-o com o caminho de um backup concreto: cria um PostgreSQL descartável, sem rede nem volumes da base original, e remove-o no final.</p>
+<div class="file-content">
+<div class="file-content-header"><span class="file-name">/srv/db/scripts/restore-check.sh</span><button type="button" class="copy-file-btn">Copiar conteúdo</button></div>
+<pre tabindex="0">${escapeCode(postgresRestoreScript)}</pre>
+</div>
+<div class="command-block"><code>bash /srv/db/scripts/restore-check.sh /srv/db/backups/NOME_DO_BACKUP.sql.gz</code><button type="button" class="copy-btn">Copiar</button></div>
+<div class="warning"><strong>Retenção e recuperação:</strong> o backup remove apenas os seus ficheiros <code>all_databases_*.sql.gz</code> com mais de 14 dias e só depois de um novo backup válido. Mantém também uma cópia fora do VPS e repete o ensaio de restauro. O exemplo de restauro pressupõe o cluster de laboratório com o utilizador <code>exemplo1</code>.</div>
+
 </div>
 </div>
 </div>
@@ -998,8 +961,8 @@ PubkeyAuthentication yes</pre>
 <input type="checkbox" id="s-9-7">
 <div class="step-body">
 <span class="step-num">9.7</span>
-<div class="step-title">Criar GitHub Secrets</div>
-<div class="step-desc">No GitHub: repositório → Settings → Secrets → Actions → adicionar todos os valores do <code>.env</code> como secrets</div>
+<div class="step-title">Preparar o ambiente do laboratório</div>
+<div class="step-desc">No GitHub, cria o environment <code>laboratorio</code> e limita-o à branch <code>main</code>. A app deste exemplo não precisa de secrets de base de dados ou e-mail. O <code>GITHUB_TOKEN</code> de curta duração é fornecido pelo GitHub. Depois de validares o proxy na fase 10, define nesse environment a variável <code>SMOKE_URL</code> com <code>https://app.dominio.com</code> para verificar o percurso público nos deployments seguintes.</div>
 </div>
 </div>
 <div class="setup-step">
@@ -1013,80 +976,10 @@ PubkeyAuthentication yes</pre>
 <span class="file-name">.github/workflows/build.yml</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="yaml-key">name</span>: <span class="yaml-str">Build e deployment</span>
-
-<span class="yaml-key">on</span>:
-  <span class="yaml-key">push</span>:
-    <span class="yaml-key">branches</span>: [<span class="yaml-str">main</span>]
-
-<span class="yaml-key">jobs</span>:
-  <span class="yaml-key">quality</span>:
-    <span class="yaml-key">runs-on</span>: <span class="yaml-str">ubuntu-latest</span>
-    <span class="yaml-key">steps</span>:
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/checkout@v4</span>
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/setup-node@v4</span>
-        <span class="yaml-key">with</span>:
-          <span class="yaml-key">node-version</span>: <span class="yaml-str">"24"</span>
-          <span class="yaml-key">cache</span>: <span class="yaml-str">npm</span>
-      - <span class="yaml-key">run</span>: <span class="yaml-str">npm ci</span>
-      - <span class="yaml-key">run</span>: <span class="yaml-str">npm run lint</span>
-      - <span class="yaml-key">run</span>: <span class="yaml-str">npm run build</span>
-
-  <span class="yaml-key">build</span>:
-    <span class="yaml-key">needs</span>: <span class="yaml-str">quality</span>
-    <span class="yaml-key">runs-on</span>: <span class="yaml-str">ubuntu-latest</span>
-    <span class="yaml-key">permissions</span>:
-      <span class="yaml-key">contents</span>: <span class="yaml-str">read</span>
-      <span class="yaml-key">packages</span>: <span class="yaml-str">write</span>
-    <span class="yaml-key">steps</span>:
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/checkout@v4</span>
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">docker/setup-buildx-action@v3</span>
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">docker/login-action@v3</span>
-        <span class="yaml-key">with</span>:
-          <span class="yaml-key">registry</span>: <span class="yaml-str">ghcr.io</span>
-          <span class="yaml-key">username</span>: <span class="yaml-str">\${{ github.actor }}</span>
-          <span class="yaml-key">password</span>: <span class="yaml-str">\${{ secrets.GITHUB_TOKEN }}</span>
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">docker/build-push-action@v6</span>
-        <span class="yaml-key">with</span>:
-          <span class="yaml-key">context</span>: <span class="yaml-str">.</span>
-          <span class="yaml-key">push</span>: <span class="yaml-num">true</span>
-          <span class="yaml-key">tags</span>: |
-            <span class="yaml-str">ghcr.io/\${{ github.repository }}:\${{ github.sha }}</span>
-            <span class="yaml-str">ghcr.io/\${{ github.repository }}:latest</span>
-
-  <span class="yaml-key">deploy</span>:
-    <span class="yaml-key">needs</span>: <span class="yaml-str">build</span>
-    <span class="yaml-key">runs-on</span>: <span class="yaml-str">self-hosted</span>
-    <span class="yaml-key">permissions</span>:
-      <span class="yaml-key">contents</span>: <span class="yaml-str">read</span>
-      <span class="yaml-key">packages</span>: <span class="yaml-str">read</span>
-    <span class="yaml-key">steps</span>:
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/checkout@v4</span>
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">docker/login-action@v3</span>
-        <span class="yaml-key">with</span>:
-          <span class="yaml-key">registry</span>: <span class="yaml-str">ghcr.io</span>
-          <span class="yaml-key">username</span>: <span class="yaml-str">\${{ github.actor }}</span>
-          <span class="yaml-key">password</span>: <span class="yaml-str">\${{ secrets.GITHUB_TOKEN }}</span>
-      - <span class="yaml-key">name</span>: <span class="yaml-str">Preparar e atualizar o serviço</span>
-        <span class="yaml-key">env</span>:
-          <span class="yaml-key">TAG</span>: <span class="yaml-str">\${{ github.sha }}</span>
-        <span class="yaml-key">run</span>: |
-          mkdir -p /srv/apps/nome-app
-          cp docker-compose.production.yml /srv/apps/nome-app/docker-compose.yml
-          rm -f /srv/apps/nome-app/.env
-          echo "NODE_ENV=production" > /srv/apps/nome-app/.env
-          echo "PORT=3000" >> /srv/apps/nome-app/.env
-          echo "DATABASE_URL=\${{ secrets.DATABASE_URL }}" >> /srv/apps/nome-app/.env
-          echo "RESEND_API_KEY=\${{ secrets.RESEND_API_KEY }}" >> /srv/apps/nome-app/.env
-          echo "CONTACT_FROM=\${{ secrets.CONTACT_FROM }}" >> /srv/apps/nome-app/.env
-          echo "CONTACT_TO=\${{ secrets.CONTACT_TO }}" >> /srv/apps/nome-app/.env
-          cd /srv/apps/nome-app
-          docker compose pull
-          docker compose up -d --remove-orphans
-          docker compose ps</pre>
+<pre tabindex="0">${escapeCode(laboratoryWorkflow)}</pre>
 </div>
 <div class="warning">
-<strong>Substituir:</strong> <code>nome-app</code> pelo nome real da tua aplicação. <code>GITHUB_TOKEN</code> é fornecido automaticamente pelo GitHub Actions.
+<strong>Substituir:</strong> usa o teu utilizador GitHub em minúsculas e o mesmo <code>nome-app</code> na imagem, no Compose e no diretório. O Dockerfile tem de incluir um healthcheck. A imagem é testada e analisada antes de ser publicada. Este workflow é um exemplo para o laboratório; o workflow deste guia faz build e publicação, com a entrega descrita no README.
 </div>
 <div class="danger">
 <strong>Runner self-hosted:</strong> este modelo é útil para o laboratório, mas o runner executa código com acesso ao VPS e, neste exemplo, ao Docker. Usa apenas repositórios de confiança, não o exponhas a pull requests não confiáveis e prefere isolamento ou um mecanismo de deployment dedicado num contexto real.
@@ -1111,8 +1004,8 @@ PubkeyAuthentication yes</pre>
 <span class="step-num">10.1</span>
 <div class="step-title">Criar estrutura de pastas das apps</div>
 <div class="command-block">
-<code>mkdir -p /srv/apps/{site-institucional,api-backend,loja-online}</code>
-<span class="comment"># Cria a pasta apps e três projetos de exemplo</span>
+<code>install -d -m 2770 -o runner -g deploy /srv/apps/nome-app</code>
+<span class="comment"># Como root; cria apenas a pasta desta app com acesso para o runner</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 <div class="file-content">
@@ -1120,19 +1013,10 @@ PubkeyAuthentication yes</pre>
 <span class="file-name">Estrutura esperada em /srv/apps/</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="folder">/srv/apps/</span>
-├── <span class="folder">site-institucional/</span><span class="comment">← frontend (Next.js, React, etc.)</span>
-│   ├── <span class="file">docker-compose.yml</span>
-│   └── <span class="file">.env</span>
-├── <span class="folder">api-backend/</span><span class="comment">← backend (ASP.NET, Node API, etc.)</span>
-│   ├── <span class="file">docker-compose.yml</span>
-│   └── <span class="file">.env</span>
-└── <span class="folder">loja-online/</span><span class="comment">← projeto futuro</span>
-    ├── <span class="file">docker-compose.yml</span>
-    └── <span class="file">.env</span></pre>
+<pre tabindex="0">${escapeCode("/srv/apps/\nnome-app/\n    docker-compose.yml\n    docker-compose.previous.yml\n    previous-image.txt\n")}</pre>
 </div>
 <div class="tip">
-<strong>Padrão:</strong> Na VPS só se criam as pastas em <code>/srv/apps/</code> — os ficheiros (<code>docker-compose.yml</code> e <code>.env</code>) são criados pelo runner do CI/CD no próximo <code>git push</code>. Para adicionar uma app nova, basta criar a pasta e seguir os passos abaixo.
+<strong>Padrão:</strong> prepara a pasta com o utilizador root antes do primeiro push. O runner copia o Compose para essa pasta e conserva a configuração e a referência da imagem anterior para uma reversão manual. Não cria ficheiros com secrets da aplicação.
 </div>
 </div>
 </div>
@@ -1151,26 +1035,10 @@ PubkeyAuthentication yes</pre>
 <span class="file-name">docker-compose.production.yml</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="yaml-key">services</span>:
-  <span class="yaml-key">app</span>:
-    <span class="yaml-key">image</span>: <span class="yaml-str">ghcr.io/UTILIZADOR_GITHUB/nome-app:\${TAG:-latest}</span>
-    <span class="yaml-key">container_name</span>: <span class="yaml-str">nome-app</span>
-    <span class="yaml-key">restart</span>: <span class="yaml-str">unless-stopped</span>
-    <span class="yaml-key">environment</span>:
-      - <span class="yaml-str">HOSTNAME=0.0.0.0</span> <span class="yaml-comment"># Next.js standalone: bind em todas as interfaces</span>
-    <span class="yaml-key">env_file</span>: <span class="yaml-str">./.env</span>
-    <span class="yaml-key">networks</span>:
-      - <span class="yaml-str">apps</span>
-      - <span class="yaml-str">data</span> <span class="yaml-comment"># Só precisas se ligar a PostgreSQL</span>
-
-<span class="yaml-key">networks</span>:
-  <span class="yaml-key">apps</span>:
-    <span class="yaml-key">external</span>: <span class="yaml-num">true</span>
-  <span class="yaml-key">data</span>:
-    <span class="yaml-key">external</span>: <span class="yaml-num">true</span></pre>
+<pre tabindex="0">${escapeCode(appCompose)}</pre>
 </div>
 <div class="tip">
-<strong>Nota:</strong> o ficheiro <code>.env</code> da app não se cria à mão — o runner cria-o na VPS a partir dos GitHub Secrets (Fase 9.7). Se não precisares de BD, remove a rede <code>data</code>. A imagem vem do GHCR com <code>TAG</code> (git sha no deploy; default <code>latest</code>). Rollback: <code>TAG=&lt;sha_anterior&gt; docker compose up -d</code>.
+<strong>Versão explícita:</strong> <code>TAG</code> é obrigatória e corresponde ao SHA completo publicado no GHCR. A app do exemplo liga-se apenas à rede <code>apps</code>; o PostgreSQL é um laboratório separado. Uma app que precise de base de dados deve receber os seus secrets no runtime e ligar-se à rede <code>data</code>.
 </div>
 <div class="warning">
 <strong>Porquê o <code>HOSTNAME=0.0.0.0</code>?</strong> O Next.js em modo standalone usa <code>process.env.HOSTNAME || '0.0.0.0'</code> como endereço de bind. Dentro de um container, o Docker define <code>HOSTNAME</code> como o ID do container — sem esta variável, o servidor só fica a escutar no IP da eth0 e o healthcheck a <code>127.0.0.1</code> falha. Define-a no <code>environment</code> do Compose (sobrepõe-se ao valor que o runtime injeta).
@@ -1192,12 +1060,10 @@ PubkeyAuthentication yes</pre>
 <span class="file-name">Estrutura criada pelo runner em /srv/apps/nome-app/</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="folder">/srv/apps/nome-app/</span>
-├── <span class="file">docker-compose.yml</span><span class="comment">← copiado de docker-compose.production.yml</span>
-└── <span class="file">.env</span><span class="comment">← criado a partir dos GitHub Secrets</span></pre>
+<pre tabindex="0">${escapeCode("/srv/apps/nome-app/\n    docker-compose.yml\n    docker-compose.previous.yml  # após o segundo deployment\n    previous-image.txt            # imagem anterior\n")}</pre>
 </div>
 <div class="tip">
-<strong>Verificar:</strong> depois de o workflow terminar, confirma na VPS com <code>docker ps</code> que o contentor <code>nome-app</code> está <code>Up</code> e saudável.
+<strong>Primeiro deployment:</strong> o job espera pelo estado saudável do contentor. Configura o proxy nos passos seguintes e valida o URL público antes de definir <code>SMOKE_URL</code>. Guarda a referência da imagem de cada versão aprovada para rollback.
 </div>
 </div>
 </div>
@@ -1205,7 +1071,8 @@ PubkeyAuthentication yes</pre>
 <input type="checkbox" id="s-10-4">
 <div class="step-body">
 <span class="step-num">10.4</span>
-<div class="step-title">Criar nginx conf da app</div>
+<div class="step-title">Configurar o DNS e o proxy da app</div>
+<p>Cria no Cloudflare o registo <code>app</code> apontado ao IP do VPS, com proxy ativo, e confirma que o Origin Certificate cobre <code>app.dominio.com</code>. Depois cria o ficheiro abaixo.</p>
 <div class="command-block">
 <code>nano /srv/proxy/conf.d/nome-app.conf</code>
 <span class="comment"># Criar ficheiro e colar o conteúdo abaixo</span>
@@ -1232,7 +1099,9 @@ PubkeyAuthentication yes</pre>
 <span class="yaml-key">ssl_protocols</span> <span class="yaml-str">TLSv1.2 TLSv1.3</span>;
 
 <span class="yaml-key">location</span> <span class="yaml-str">/</span> {
-<span class="yaml-key">proxy_pass</span> <span class="yaml-str">http://nome-app:3000</span>;
+<span class="yaml-key">resolver</span> <span class="yaml-str">127.0.0.11 valid=10s ipv6=off</span>;
+<span class="yaml-key">set</span> <span class="yaml-str">$app_backend nome-app:3000</span>;
+<span class="yaml-key">proxy_pass</span> <span class="yaml-str">http://$app_backend</span>;
 <span class="yaml-key">proxy_set_header</span> <span class="yaml-str">Host $host</span>;
 <span class="yaml-key">proxy_set_header</span> <span class="yaml-str">X-Real-IP $remote_addr</span>;
 <span class="yaml-key">proxy_set_header</span> <span class="yaml-str">X-Forwarded-For $proxy_add_x_forwarded_for</span>;
@@ -1252,7 +1121,7 @@ PubkeyAuthentication yes</pre>
 <div class="step-title">Recarregar o proxy</div>
 <div class="command-block">
 <code>cd /srv/proxy && docker exec proxy nginx -t && docker exec proxy nginx -s reload</code>
-<span class="comment"># O contentor já existe na rede, por isso o Nginx resolve o upstream sem erro</span>
+<span class="comment"># O resolver Docker volta a resolver o nome quando o contentor muda de IP</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 </div>
@@ -1263,14 +1132,16 @@ PubkeyAuthentication yes</pre>
 <span class="step-num">10.6</span>
 <div class="step-title">Verificar deploy</div>
 <div class="command-block">
-<code>docker ps && curl -I https://nome-app.dominio.com</code>
-<span class="comment"># Contentores e teste do URL</span>
+<code>docker ps &amp;&amp; curl --fail --show-error --silent --connect-timeout 5 --max-time 15 https://app.dominio.com</code>
+<span class="comment"># Confirma que o conteúdo devolvido é o da aplicação, depois define SMOKE_URL no environment laboratorio</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 </div>
 </div>
 </div>
 </div>
+
+<div class="tip"><strong>Reversão:</strong> no diretório da app, consulta <code>previous-image.txt</code> e usa o SHA completo dessa referência. Conserva o Compose anterior se a configuração também mudou. Segue os comandos de reversão na lição 4.5 e volta a verificar o URL público; trocar a imagem não reverte dados.</div>
 
 <div class="setup-reset">
 <button type="button" data-action="reset-progress" data-progress-store="setup-vps-progress"> Repor progresso da configuração</button>

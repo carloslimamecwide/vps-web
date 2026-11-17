@@ -1,4 +1,3 @@
-// Generated from guia-vps.html by scripts/migrate-source.mjs.
 export const PROGRESS_IDS = {
   "devops": [
     "do-f1",

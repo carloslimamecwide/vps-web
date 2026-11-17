@@ -30,19 +30,45 @@ npm run build
 npm run start
 npm run lint
 npm run typecheck
+npm run test:ops
 ```
 
 ## Produção (resumo)
 
 - `Dockerfile` — multi-stage, utilizador `nextjs`, healthcheck
-- `docker-compose.production.yml` — imagem GHCR com `TAG`, rede `apps`
-- `.github/workflows/deploy.yml` — lint/typecheck → build/push → deploy self-hosted + smoke health
+- `docker-compose.production.yml` — SHA obrigatório, limites de CPU/memória, logs com rotação e healthcheck
+- `docker-compose.staging.yml` — teste isolado da mesma imagem, com porta apenas em loopback
+- `.github/workflows/deploy.yml` — lint/typecheck/testes → build Docker → staging e smoke HTTP → Trivy → publicação no GHCR
+- Pull requests são validados sem publicar imagens; em `main`, a publicação só acontece após os testes e o scan
+- O workflow deste repositório publica a imagem. O deployment do guia é uma etapa separada, descrita no [procedimento operacional](docs/deployment.md)
 
 ```bash
-# no VPS (rede Docker já criada)
-docker network create apps   # uma vez
-TAG=<git-sha-curto> docker compose -f docker-compose.production.yml up -d
+# No VPS, usa o SHA completo de uma imagem publicada e aprovada em staging.
+# A rede apps e o proxy têm de estar preparados.
+export TAG=SHA_COMPLETO_PUBLICADO_NO_GHCR
+docker compose -f docker-compose.production.yml pull
+docker compose -f docker-compose.production.yml up --wait --wait-timeout 120
 ```
+
+O pipeline mantém os aliases existentes `latest` e `deploy` por compatibilidade,
+mas o Compose de produção exige uma versão explícita por SHA. O scan bloqueia a
+publicação quando encontra vulnerabilidades HIGH ou CRITICAL.
+
+## Exemplos operacionais do guia
+
+Os exemplos executáveis ficam em `examples/`. As lições usam uma cópia gerada
+destes ficheiros para manter os exemplos de aprendizagem e do laboratório iguais.
+
+```bash
+npm run examples:sync  # depois de alterar examples/
+npm run test:ops       # deteta divergências e testa falhas, retenção e smoke HTTP
+npm run test:postgres  # com Docker ativo: backup e restauro em contentores descartáveis
+```
+
+`examples/postgres/backup.sh` publica apenas dumps válidos e não vazios;
+`examples/postgres/restore-check.sh` ensaia o restauro num contentor descartável.
+O exemplo de CI/CD em `examples/build-and-deploy.yml` inclui um runner para o
+laboratório e é distinto do workflow de publicação deste repositório.
 
 ## Estrutura
 
@@ -61,7 +87,3 @@ docs/            # Rascunho de post LinkedIn
 ## Licença
 
 MIT — ver [LICENSE](./LICENSE).
-
-## Contribuições
-
-

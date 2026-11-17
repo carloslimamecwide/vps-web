@@ -1,4 +1,3 @@
-// Generated from guia-vps.html by scripts/migrate-source.mjs.
 export const devopsHtml = `<div class="course-header">
 <h2>Roadmap de DevOps</h2>
 <p>Um mapa de competências para te orientares, não uma lista obrigatória nem uma definição universal da função de DevOps.</p>

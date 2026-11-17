@@ -8,11 +8,13 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "migrate:source": "node scripts/migrate-source.mjs guia-vps.html"
+    "examples:sync": "node scripts/sync-guide-examples.mjs",
+    "test:ops": "node scripts/sync-guide-examples.mjs --check && node --test tests/operations.test.mjs",
+    "test:postgres": "node scripts/test-postgres-lab.mjs"
   },
   "dependencies": {
     "html-react-parser": "^6.1.5",
-    "next": "^16.2.12",
+    "next": "^16.4.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
@@ -21,7 +23,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.2.12",
+    "eslint-config-next": "^16.4.6",
     "typescript": "^6.0.3"
   }
 }

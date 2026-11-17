@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.github
+.vscode
+.playwright-mcp
+.env*
+*.pem
+*.log
+*.tsbuildinfo
+coverage
+out
+build
+.DS_Store

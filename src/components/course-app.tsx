@@ -11,6 +11,7 @@ import {
   type DisclosureEventDetail,
 } from "@/components/collapsible-block";
 import { useCourse } from "@/components/course-provider";
+import { GuideIcon } from "@/components/guide-icon";
 import {
   ESSENTIAL_LEARNING_IDS,
   ESSENTIAL_SETUP_IDS,
@@ -64,6 +65,19 @@ export function CourseApp({ children }: { children: ReactNode }) {
   const essentialLearningPercent = Math.round(
     (essentialLearningDone / ESSENTIAL_LEARNING_IDS.length) * 100,
   );
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setSidebarOpen(false);
+      rootRef.current?.querySelector<HTMLButtonElement>(".sidebar-toggle")?.focus();
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [setSidebarOpen, sidebarOpen]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -243,7 +257,7 @@ export function CourseApp({ children }: { children: ReactNode }) {
 
         <main className="content">
           <div className="crumb">
-            guia <span style={{ color: "var(--text-mute)" }}>/</span>{" "}
+            Guia <span aria-hidden="true">/</span>{" "}
             <span className="cur">{activeMeta.crumb}</span>
           </div>
 
@@ -263,7 +277,10 @@ export function CourseApp({ children }: { children: ReactNode }) {
         aria-label={sidebarOpen ? "Fechar menu" : "Abrir menu"}
         aria-expanded={sidebarOpen}
         aria-controls="sidebar"
-      />
+      >
+        <GuideIcon name={sidebarOpen ? "close" : "menu"} />
+        <span>{sidebarOpen ? "Fechar" : "Menu"}</span>
+      </button>
     </div>
   );
 }

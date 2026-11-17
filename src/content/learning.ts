@@ -1,4 +1,6 @@
-// Generated from guia-vps.html by scripts/migrate-source.mjs.
+import { escapeCode } from "@/lib/code-example";
+import { appDockerfile, laboratoryWorkflow, postgresBackupScript, postgresCompose } from "@/content/operation-examples";
+
 export const learningHtml = `<div class="course-header">
 <h2> Percurso introdutório de DevOps</h2>
 <p>Começa pelos fundamentos e conclui a iniciação em 7.1 — O que é um Reverse Proxy? As lições seguintes ficam disponíveis como continuação, sem bloquearem o teu progresso essencial.</p>
@@ -58,12 +60,11 @@ export const learningHtml = `<div class="course-header">
 <span class="progress-label">Progresso essencial:</span>
 <div class="progress-bar">
 <div class="progress-fill" id="learningProgressFill" style="width: 0%"></div>
-            <div class="learning-reset">
-                <button type="button" data-action="reset-progress" data-progress-store="learning-progress">Repor progresso</button>
-            </div>
-
 </div>
 <span class="progress-percent" id="learningProgressPercent">0%</span>
+<div class="learning-reset">
+<button type="button" data-action="reset-progress" data-progress-store="learning-progress">Repor progresso</button>
+</div>
 </div>
 
             
@@ -82,7 +83,7 @@ export const learningHtml = `<div class="course-header">
 
                         
 <div class="learning-objective">
-<strong>Objetivos:</strong> Compreender porquê que 90% dos servidores usam Linux e as vantagens para DevOps.
+<strong>Objetivos:</strong> Compreender a utilização de Linux em servidores e as suas vantagens para DevOps.
 </div>
 
 <p style="color: var(--text-secondary); line-height: 1.8;">
@@ -609,7 +610,7 @@ export const learningHtml = `<div class="course-header">
 </div>
 <div class="quick-ref-card">
 <h4> Deploy rápido</h4>
-<p style="color: var(--text-secondary);">Puxar image + arrancar container = segundos. Rollbacks instantâneos.</p>
+<p style="color: var(--text-secondary);">A imagem permite repetir o arranque. Um rollback exige uma versão anterior e verificação da aplicação e dos dados.</p>
 </div>
 </div>
 </div>
@@ -750,46 +751,7 @@ export const learningHtml = `<div class="course-header">
 <span class="file-name">Dockerfile (exemplo Next.js)</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="bash-comment"># --- Fase 1: Build ---</span>
-<span class="bash-keyword">FROM</span> node:24-alpine <span class="bash-keyword">AS</span> builder
-
-<span class="bash-comment"># Definir diretório de trabalho</span>
-<span class="bash-keyword">WORKDIR</span> /app
-
-<span class="bash-comment"># Copiar package.json primeiro (melhor cache)</span>
-<span class="bash-keyword">COPY</span> package.json package-lock.json ./
-
-<span class="bash-comment"># Instalar dependências</span>
-<span class="bash-keyword">RUN</span> npm ci
-
-<span class="bash-comment"># Copiar código fonte</span>
-<span class="bash-keyword">COPY</span> . .
-
-<span class="bash-comment"># Build (requer output: "standalone" no next.config)</span>
-<span class="bash-keyword">RUN</span> npm run build
-
-<span class="bash-comment"># --- Fase 2: Produção ---</span>
-<span class="bash-keyword">FROM</span> node:24-alpine
-
-<span class="bash-keyword">WORKDIR</span> /app
-<span class="bash-keyword">ENV</span> NODE_ENV=production
-
-<span class="bash-comment"># Utilizador sem privilégios root</span>
-<span class="bash-keyword">RUN</span> addgroup --system --gid 1001 nodejs &amp;&amp; adduser --system --uid 1001 nextjs
-
-<span class="bash-comment"># Standalone com dono correto (omite public/ se o projeto não tiver)</span>
-<span class="bash-keyword">COPY</span> --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-<span class="bash-keyword">COPY</span> --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-<span class="bash-keyword">USER</span> nextjs
-
-<span class="bash-keyword">EXPOSE</span> <span class="bash-num">3000</span>
-<span class="bash-keyword">ENV</span> PORT=3000
-<span class="bash-keyword">ENV</span> HOSTNAME=0.0.0.0
-
-<span class="bash-keyword">HEALTHCHECK</span> --interval=30s --timeout=5s --start-period=20s --retries=3 <span class="bash-keyword">CMD</span> node -e "fetch('http://127.0.0.1:3000').then((r)=&gt;process.exit(r.ok?0:1)).catch(()=&gt;process.exit(1))"
-
-<span class="bash-keyword">CMD</span> [<span class="bash-str">"node"</span>, <span class="bash-str">"server.js"</span>]</pre>
+<pre tabindex="0">${escapeCode(appDockerfile)}</pre>
 </div>
 </div>
 
@@ -950,16 +912,15 @@ README.md</pre>
                         <label class="lesson-done"><input type="checkbox" id="learn-docker-compose-4"><span>Concluída</span></label>
 
 <p style="color: var(--text-secondary); line-height: 1.8;">
-                            O Docker Compose substitui <code>\${VARIAVEL}</code> no YAML pelo valor do ficheiro <code>.env</code> no mesmo diretório. Assim, não guardas segredos no repositório.
+                            O Docker Compose pode substituir <code>\${VARIAVEL}</code> no YAML com valores do ficheiro <code>.env</code>. Usa-o para configuração sem secrets, como portas e tags. Este ficheiro não é automaticamente passado à aplicação: os valores têm de ser usados no Compose.
 </p>
 <div class="file-content">
 <div class="file-content-header">
 <span class="file-name">.env (exemplo)</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="bash-keyword">POSTGRES_DB</span>=<span class="bash-str">exemplo1</span>
-<span class="bash-keyword">POSTGRES_USER</span>=<span class="bash-str">exemplo1</span>
-<span class="bash-keyword">POSTGRES_PASSWORD</span>=<span class="bash-str">minha_palavra_passe_forte</span></pre>
+<pre tabindex="0">APP_PORT=3000
+TAG=SHA_COMPLETO_PUBLICADO_NO_GHCR</pre>
 </div>
 <div class="file-content">
 <div class="file-content-header">
@@ -967,14 +928,15 @@ README.md</pre>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
 <pre tabindex="0"><span class="yaml-key">services</span>:
-  <span class="yaml-key">postgres</span>:
-    <span class="yaml-key">image</span>: <span class="yaml-str">postgres:16-alpine</span>
-    <span class="yaml-key">env_file</span>: <span class="yaml-str">./.env</span> <span class="yaml-comment"># Usa o ficheiro .env</span></pre>
+  <span class="yaml-key">app</span>:
+    <span class="yaml-key">image</span>: <span class="yaml-str">ghcr.io/UTILIZADOR_GITHUB/nome-app:\${TAG:?Define um SHA completo}</span>
+    <span class="yaml-key">environment</span>:
+      <span class="yaml-key">PORT</span>: <span class="yaml-str">\${APP_PORT:-3000}</span></pre>
 </div>
 </div>
 
 <div class="warning">
-<strong>Importante:</strong> O ficheiro <code>.env</code> deve estar no mesmo diretório do <code>docker-compose.yml</code>. Nunca subas o <code>.env</code> ao Git!
+<strong>Configuração e secrets:</strong> a variável do shell tem precedência sobre o <code>.env</code>. Mantém o ficheiro fora do Git e do contexto Docker. Para passwords, usa secrets de runtime; não confundas interpolação do YAML com injeção de variáveis na aplicação.
 </div>
 </div>
 </div>
@@ -1266,7 +1228,7 @@ README.md</pre>
 
 <div class="command-block">
 <code>docker tag app:latest ghcr.io/UTILIZADOR_GITHUB/app:latest</code>
-<span class="comment"># latest = versão mais recente</span>
+<span class="comment"># latest é uma tag convencional; não garante a versão mais recente</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 <div class="command-block">
@@ -1366,30 +1328,12 @@ README.md</pre>
 <span class="file-name">docker-compose.yml (PostgreSQL)</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="yaml-key">services</span>:
-  <span class="yaml-key">postgres</span>:
-    <span class="yaml-key">image</span>: <span class="yaml-str">postgres:16-alpine</span>
-    <span class="yaml-key">container_name</span>: <span class="yaml-str">postgres</span>
-    <span class="yaml-key">restart</span>: <span class="yaml-str">unless-stopped</span>
-    <span class="yaml-key">environment</span>:
-      <span class="yaml-key">POSTGRES_DB</span>: <span class="yaml-str">exemplo1</span>
-      <span class="yaml-key">POSTGRES_USER</span>: <span class="yaml-str">exemplo1</span>
-      <span class="yaml-key">POSTGRES_PASSWORD</span>: <span class="yaml-str">SUBSTITUIR_POR_PALAVRA_PASSE_FORTE</span>
-    <span class="yaml-key">volumes</span>:
-      - <span class="yaml-str">./data:/var/lib/postgresql/data</span>
-    <span class="yaml-key">ports</span>:
-      - <span class="yaml-str">"127.0.0.1:5432:5432"</span> <span class="comment"># Só local</span>
-    <span class="yaml-key">networks</span>:
-      - <span class="yaml-str">data</span>
-
-<span class="yaml-key">networks</span>:
-  <span class="yaml-key">data</span>:
-    <span class="yaml-key">external</span>: <span class="yaml-num">true</span></pre>
+<pre tabindex="0">${escapeCode(postgresCompose)}</pre>
 </div>
 
 <div class="command-block">
-<code>docker compose up -d</code>
-<span class="comment"># Arrancar PostgreSQL</span>
+<code>docker compose up --wait --wait-timeout 120</code>
+<span class="comment"># Requer o secret e a rede data: prepara-os nas fases 5 e 8 do laboratório</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 <div class="command-block">
@@ -1559,23 +1503,16 @@ JOIN orders ON users.id = orders.user_id;</code>
 <span class="file-name">backup.sh (exemplo do VPS)</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="bash-keyword">#!/bin/bash</span>
-<span class="bash-keyword">DATE</span>=<span class="bash-str">$(date +%Y%m%d_%H%M%S)</span>
-<span class="bash-keyword">BACKUP_DIR</span>=<span class="bash-str">/srv/db/backups</span>
-
-<span class="bash-comment"># Criar backup</span>
-docker exec postgres pg_dump -U exemplo1 -Fc exemplo1 > <span class="bash-str">$BACKUP_DIR/exemplo1_$DATE.dump</span>
-
-<span class="bash-comment"># DESTRUTIVO: eliminar backups locais com mais de 14 dias</span>
-find <span class="bash-str">$BACKUP_DIR</span> -name "*.dump" -mtime +14 -delete</pre>
+<pre tabindex="0">${escapeCode(postgresBackupScript)}</pre>
 </div>
 
 <div class="warning"><strong>Política de retenção:</strong> testa primeiro o comando <code>find</code> sem <code>-delete</code> e mantém uma cópia fora do VPS. Um backup no mesmo servidor não protege contra a perda desse servidor.</div>
 
-<h4>Cron Job</h4>
+<p>Este backup é SQL comprimido (<code>.sql.gz</code>). A fase 8 mostra um script de restauro num contentor descartável. Um gzip válido não prova que o SQL restaura corretamente: testa a recuperação periodicamente.</p>
+<h4>Cron job</h4>
 <div class="command-block">
 <code>0 2 * * * /srv/db/scripts/backup.sh >> /var/log/pg-backup.log 2>&1</code>
-<span class="comment"># Todos os dias às 02:00</span>
+<span class="comment"># No crontab do root (crontab -e); /etc/crontab exige também o campo root</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 
@@ -1648,67 +1585,7 @@ find <span class="bash-str">$BACKUP_DIR</span> -name "*.dump" -mtime +14 -delete
 <span class="file-name">.github/workflows/build.yml</span>
 <button type="button" class="copy-file-btn">Copiar Conteúdo</button>
 </div>
-<pre tabindex="0"><span class="yaml-key">name</span>: <span class="yaml-str">Build e deployment</span>
-
-<span class="yaml-key">on</span>:
-  <span class="yaml-key">push</span>:
-    <span class="yaml-key">branches</span>: [<span class="yaml-str">main</span>]
-
-<span class="yaml-key">jobs</span>:
-  <span class="yaml-key">quality</span>:
-    <span class="yaml-key">runs-on</span>: <span class="yaml-str">ubuntu-latest</span>
-    <span class="yaml-key">steps</span>:
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/checkout@v4</span>
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/setup-node@v4</span>
-        <span class="yaml-key">with</span>:
-          <span class="yaml-key">node-version</span>: <span class="yaml-str">"24"</span>
-          <span class="yaml-key">cache</span>: <span class="yaml-str">npm</span>
-      - <span class="yaml-key">run</span>: <span class="yaml-str">npm ci</span>
-      - <span class="yaml-key">run</span>: <span class="yaml-str">npm run lint</span>
-      - <span class="yaml-key">run</span>: <span class="yaml-str">npm run build</span>
-
-  <span class="yaml-key">build</span>:
-    <span class="yaml-key">needs</span>: <span class="yaml-str">quality</span>
-    <span class="yaml-key">runs-on</span>: <span class="yaml-str">ubuntu-latest</span>
-    <span class="yaml-key">permissions</span>:
-      <span class="yaml-key">contents</span>: <span class="yaml-str">read</span>
-      <span class="yaml-key">packages</span>: <span class="yaml-str">write</span>
-    <span class="yaml-key">steps</span>:
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">actions/checkout@v4</span>
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">docker/setup-buildx-action@v3</span>
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">docker/login-action@v3</span>
-        <span class="yaml-key">with</span>:
-          <span class="yaml-key">registry</span>: <span class="yaml-str">ghcr.io</span>
-          <span class="yaml-key">username</span>: <span class="yaml-str">\${{ github.actor }}</span>
-          <span class="yaml-key">password</span>: <span class="yaml-str">\${{ secrets.GITHUB_TOKEN }}</span>
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">docker/build-push-action@v6</span>
-        <span class="yaml-key">with</span>:
-          <span class="yaml-key">context</span>: <span class="yaml-str">.</span>
-          <span class="yaml-key">push</span>: <span class="yaml-num">true</span>
-          <span class="yaml-key">tags</span>: |
-            <span class="yaml-str">ghcr.io/\${{ github.repository }}:\${{ github.sha }}</span>
-            <span class="yaml-str">ghcr.io/\${{ github.repository }}:latest</span>
-
-  <span class="yaml-key">deploy</span>:
-    <span class="yaml-key">needs</span>: <span class="yaml-str">build</span>
-    <span class="yaml-key">runs-on</span>: <span class="yaml-str">self-hosted</span>
-    <span class="yaml-key">permissions</span>:
-      <span class="yaml-key">contents</span>: <span class="yaml-str">read</span>
-      <span class="yaml-key">packages</span>: <span class="yaml-str">read</span>
-    <span class="yaml-key">steps</span>:
-      - <span class="yaml-key">uses</span>: <span class="yaml-str">docker/login-action@v3</span>
-        <span class="yaml-key">with</span>:
-          <span class="yaml-key">registry</span>: <span class="yaml-str">ghcr.io</span>
-          <span class="yaml-key">username</span>: <span class="yaml-str">\${{ github.actor }}</span>
-          <span class="yaml-key">password</span>: <span class="yaml-str">\${{ secrets.GITHUB_TOKEN }}</span>
-      - <span class="yaml-key">name</span>: <span class="yaml-str">Atualizar o serviço</span>
-        <span class="yaml-key">env</span>:
-          <span class="yaml-key">TAG</span>: <span class="yaml-str">\${{ github.sha }}</span>
-        <span class="yaml-key">run</span>: |
-          cd /srv/apps/nome-app
-          docker compose pull
-          docker compose up -d --remove-orphans
-          docker compose ps</pre>
+<pre tabindex="0">${escapeCode(laboratoryWorkflow)}</pre>
 </div>
 
 <div class="warning">
@@ -1781,7 +1658,7 @@ find <span class="bash-str">$BACKUP_DIR</span> -name "*.dump" -mtime +14 -delete
 </div>
 
 <p style="color: var(--text-secondary); line-height: 1.8;">
-<strong>NUNCA</strong> coloques palavras-passe ou chaves no código-fonte. Usa <strong>GitHub Secrets</strong> para CI/CD e <strong>ficheiros .env</strong> para Docker.
+Mantém palavras-passe e chaves fora do código. Prefere credenciais temporárias como <code>GITHUB_TOKEN</code> ou OIDC no CI/CD e um secret manager no runtime. No laboratório PostgreSQL, o Docker Compose monta um ficheiro secreto restrito em <code>/run/secrets</code>.
 </p>
 
 <h4>Onde guardar segredos</h4>
@@ -1794,14 +1671,14 @@ find <span class="bash-str">$BACKUP_DIR</span> -name "*.dump" -mtime +14 -delete
 </tr>
 </thead>
 <tbody>
-<tr><td>GitHub Actions</td><td>GitHub Secrets</td><td><code>\${{ secrets.RESEND_API_KEY }}</code></td></tr>
-<tr><td>Docker Compose</td><td>Ficheiro .env</td><td><code>POSTGRES_PASSWORD=xxx</code></td></tr>
-<tr><td>Aplicação</td><td>Variáveis de ambiente</td><td><code>export API_KEY=xxx</code></td></tr>
+<tr><td>GitHub Actions</td><td>Token temporário com permissões mínimas</td><td><code>GITHUB_TOKEN</code> ou OIDC</td></tr>
+<tr><td>Docker Compose</td><td>Secret montado no serviço autorizado</td><td><code>POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password</code></td></tr>
+<tr><td>Aplicação</td><td>Secret manager ou injeção segura no runtime</td><td>Sem credenciais persistentes no repositório ou no workflow</td></tr>
 </tbody>
 </table>
 
 <div class="warning">
-<strong>Regra de ouro:</strong> Nunca subas <code>.env</code> ao Git. Usa <code>.gitignore</code> para o ignorar.
+<strong>Regra de ouro:</strong> ignora <code>.env*</code> e ficheiros secretos em Git e no contexto Docker. Não coloques expressões <code>secrets.*</code> diretamente dentro de scripts shell; se precisares de passar um valor a um processo, usa uma variável de ambiente intermédia e argumentos devidamente protegidos. Uma app só lê um secret em ficheiro se tiver suporte para isso.
 </div>
 </div>
 
@@ -1825,9 +1702,9 @@ find <span class="bash-str">$BACKUP_DIR</span> -name "*.dump" -mtime +14 -delete
 <div class="command-block">
 <code>cd /srv/apps/nome-app<br>
 TAG=TAG_ANTERIOR docker compose pull<br>
-TAG=TAG_ANTERIOR docker compose up -d<br>
-docker compose ps</code>
-<span class="comment"># TAG_ANTERIOR = git sha no GHCR. Compose: image: ...:\${TAG:-latest}</span>
+TAG=TAG_ANTERIOR docker compose up --wait --wait-timeout 120<br>
+curl --fail --silent --show-error https://app.dominio.com</code>
+<span class="comment"># TAG_ANTERIOR = git sha no GHCR. TAG_ANTERIOR é o SHA completo; se necessário, restaura docker-compose.previous.yml antes da reversão</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 
@@ -1924,10 +1801,10 @@ docker images | grep nome-app</code>
 
 <div class="command-block">
 <code># No docker-compose.yml, parametriza a tag<br>
-image: ghcr.io/organizacao/app:\${TAG:-latest}<br><br>
+image: ghcr.io/organizacao/app:\${TAG:?Define um SHA completo}<br><br>
 # No terminal, escolhe uma tag imutável anterior<br>
 TAG=TAG_ANTERIOR docker compose pull<br>
-TAG=TAG_ANTERIOR docker compose up -d</code>
+TAG=TAG_ANTERIOR docker compose up --wait --wait-timeout 120</code>
 <span class="comment"># Substitui TAG_ANTERIOR por uma tag que exista no registo</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>

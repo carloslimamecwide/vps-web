@@ -28,9 +28,9 @@ export const introHtml = `<nav class="intro-nav">
 <div class="intro-block" id="intro-como">
 <h2>Como usar</h2>
 <ol class="intro-steps">
-<li><strong>Percurso essencial de aprendizagem (conceitos)</strong> — estuda os módulos 1 a 7.1. É este nível que conta para a conclusão da iniciação teórica.</li>
-<li><strong>Configuração do VPS (laboratório)</strong> — se quiseres praticar de ponta a ponta, executa as fases 1–10 pela ordem apresentada. Neste laboratório não há fases opcionais: inclui redes, Nginx, TLS, PostgreSQL, CI/CD e deploy.</li>
-<li><strong>Continuação da aprendizagem</strong> — aprofunda as lições 7.2–7.4 e usa os módulos 8–12 como mapa para monitorização, Kubernetes, infraestrutura como código, cloud e resolução de problemas.</li>
+<li><div><strong>Percurso essencial de aprendizagem (conceitos)</strong><p>Estuda os módulos 1 a 7.1. É este nível que conta para a conclusão da iniciação teórica.</p></div></li>
+<li><div><strong>Configuração do VPS (laboratório)</strong><p>Se quiseres praticar de ponta a ponta, executa as fases 1–10 pela ordem apresentada. Neste laboratório não há fases opcionais: inclui redes, Nginx, TLS, PostgreSQL, CI/CD e deploy.</p></div></li>
+<li><div><strong>Continuação da aprendizagem</strong><p>Aprofunda as lições 7.2–7.4 e usa os módulos 8–12 como mapa para monitorização, Kubernetes, infraestrutura como código, cloud e resolução de problemas.</p></div></li>
 </ol>
 <p style="margin-top:1rem;">Testa os comandos num ambiente descartável, lê cada aviso e substitui os valores em maiúsculas pelos teus dados. Não copies comandos para um servidor importante sem compreenderes o seu efeito.</p>
 </div>
@@ -48,7 +48,7 @@ export const introHtml = `<nav class="intro-nav">
 <div>
 <div class="map-key">01</div>
 <div class="map-title">Percurso DevOps</div>
-<div class="map-desc">Checklist de orientação: fundamentos, prática e temas para explorar depois.</div>
+<div class="map-desc">Checklist de orientação: fundamentos, prática e temas para explorar depois</div>
 </div>
 <button type="button" data-action="switch-guide" data-guide-target="devops">Abrir</button>
 </li>
@@ -56,7 +56,7 @@ export const introHtml = `<nav class="intro-nav">
 <div>
 <div class="map-key">02</div>
 <div class="map-title">Aprendizagem</div>
-<div class="map-desc">Lições com explicações e comandos. A iniciação de conceitos termina em 7.1.</div>
+<div class="map-desc">Lições com explicações e comandos. A iniciação de conceitos termina em 7.1</div>
 </div>
 <button type="button" data-action="switch-guide" data-guide-target="learning">Abrir</button>
 </li>
@@ -64,7 +64,7 @@ export const introHtml = `<nav class="intro-nav">
 <div>
 <div class="map-key">03</div>
 <div class="map-title">Configuração VPS</div>
-<div class="map-desc">Laboratório hands-on completo (10 fases): do primeiro acesso ao deployment.</div>
+<div class="map-desc">Laboratório hands-on completo (10 fases): do primeiro acesso ao deployment</div>
 </div>
 <button type="button" data-action="switch-guide" data-guide-target="setup">Abrir</button>
 </li>
@@ -72,7 +72,7 @@ export const introHtml = `<nav class="intro-nav">
 <div>
 <div class="map-key">04</div>
 <div class="map-title">Guia VPS</div>
-<div class="map-desc">Referência de consulta para comandos, ficheiros e conceitos operacionais.</div>
+<div class="map-desc">Referência de consulta para comandos, ficheiros e conceitos operacionais</div>
 </div>
 <button type="button" data-action="switch-guide" data-guide-target="vps">Abrir</button>
 </li>

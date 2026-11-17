@@ -1,4 +1,3 @@
-// Generated from guia-vps.html by scripts/migrate-source.mjs.
 export const vpsHtml = `<div class="course-header">
 <h2> Guia de consulta do VPS</h2>
 <p>Referência prática para rever comandos e ficheiros. Não é uma configuração universal nem substitui a documentação oficial, backups testados ou uma revisão de segurança.</p>
@@ -967,7 +966,7 @@ CREATE TABLE utilizadores (
                                                         
                              
 <span class="network">ghcr.io/UTILIZADOR_GITHUB</span><span class="network">exemplo1-web</span>
-                           :latest                (a correr)    
+                           :SHA_COMPLETO          (a correr)
                              
 </div>
 
@@ -977,7 +976,7 @@ git push origin main
  GitHub Actions builda imagem
  Push para GHCR
  Self-hosted runner no VPS puxa imagem
- docker compose up -d</code>
+ docker compose up --wait --wait-timeout 120</code>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 </div>
@@ -986,21 +985,24 @@ git push origin main
 <h3> Deployment manual (se necessário)</h3>
                     
 <div class="command-block">
-<span class="risk-label">A limpeza final remove imagens não utilizadas</span>
-<code>cd /srv/apps/exemplo1 && docker compose -f docker-compose.production.yml pull && docker compose -f docker-compose.production.yml up -d --remove-orphans && docker image prune -f</code>
+<code>cd /srv/apps/exemplo1<br>
+export TAG=SHA_COMPLETO_PUBLICADO_NO_GHCR<br>
+docker compose -f docker-compose.production.yml pull<br>
+docker compose -f docker-compose.production.yml up --wait --wait-timeout 120 --remove-orphans<br>
+curl --fail --silent --show-error https://app.dominio.com</code>
 <span class="comment"># Deploy manual completo</span>
 <button type="button" class="copy-btn">Copiar</button>
 </div>
 </div>
 
 <div class="subsection">
-<h3>🆕 Novo Projeto (Subdomínio)</h3>
+<h3>Novo projeto (subdomínio)</h3>
                     
 <ol style="color: var(--text-secondary); padding-left: 1.5rem; line-height: 2;">
 <li>Criar um registo DNS no Cloudflare (registo A → IP_DO_VPS)</li>
 <li>Criar diretório em VPS: <code>/srv/apps/novo-projeto/</code></li>
 <li>Criar <code>docker-compose.production.yml</code></li>
-<li>Criar <code>.env</code> com secrets</li>
+<li>Preparar os secrets no runtime apenas se a app precisar deles; usar secret manager ou montagem restrita</li>
 <li>Criar nginx conf: <code>/srv/proxy/conf.d/novo-projeto.conf</code></li>
 <li>Reiniciar proxy: <code>docker compose -f /srv/proxy/docker-compose.yml restart</code></li>
 <li>Criar repositório GitHub</li>
