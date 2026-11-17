@@ -89,9 +89,6 @@ jobs:
           exit-code: "1"
           ignore-unfixed: false
 
-      - name: Ensaiar backup e restauro PostgreSQL
-        run: npm run test:postgres
-
       - name: Remover o ambiente de teste
         if: always()
         env:

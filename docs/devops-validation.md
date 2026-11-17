@@ -6,6 +6,10 @@ Atualizado em 17 de novembro de 2026
 
 As sete situações identificadas foram corrigidas no código e nos exemplos do guia.
 
+A aplicação é um guia Next.js sem base de dados. O CI não arranca PostgreSQL nem
+executa o ensaio real do laboratório. Esse ensaio é opcional, através de
+`npm run test:lab:postgres`; os exemplos permanecem disponíveis nas lições.
+
 | Ponto | Correção aplicada |
 | --- | --- |
 | Permissões PostgreSQL | O passo consulta as permissões geridas pela imagem, sem alterar o proprietário do cluster |
@@ -39,13 +43,14 @@ standalone, que usa Node diretamente. A imagem final passou o Trivy 0.76.2 com
 
 ### Verificação final
 
-- Lint, TypeScript e sete testes operacionais: aprovados
+- Lint, TypeScript e testes operacionais com simulações: aprovados
 - Workflows: actionlint 1.7.12 e ShellCheck aprovados
 - Docker build real em Linux/arm64 com Next.js 16.4.6: aprovado
 - Staging: contentor healthy, utilizador `nextjs`, limite de 512 MiB e um CPU
 - Smoke HTTP da imagem final: página e 12 assets aprovados
-- PostgreSQL real: secret montado, dados de teste no dump e restauro num contentor
-  descartável sem erros SQL; rede/volume/contentores de teste removidos
+- Ensaio manual anterior do laboratório: secret montado, dados no dump e restauro
+  num contentor descartável. Foi corrigida entretanto uma corrida no arranque:
+  a prontidão passa a usar TCP para não aceitar o servidor Unix temporário
 - Navegador: cópia do backup preserva o código, workflows das duas lições iguais,
   dez passos da fase 8 e sem overflow horizontal no móvel
 - Identificadores de progresso: preservados os 61 do laboratório e 87 da aprendizagem

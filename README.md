@@ -41,6 +41,7 @@ npm run test:ops
 - `.github/workflows/deploy.yml` — lint/typecheck/testes → build Docker → staging e smoke HTTP → Trivy → publicação no GHCR
 - Pull requests são validados sem publicar imagens; em `main`, a publicação só acontece após os testes e o scan
 - O workflow deste repositório publica a imagem. O deployment do guia é uma etapa separada, descrita no [procedimento operacional](docs/deployment.md)
+- A aplicação não tem base de dados. O CI não cria PostgreSQL nem executa os ensaios de integração do laboratório
 
 ```bash
 # No VPS, usa o SHA completo de uma imagem publicada e aprovada em staging.
@@ -62,7 +63,14 @@ destes ficheiros para manter os exemplos de aprendizagem e do laboratório iguai
 ```bash
 npm run examples:sync  # depois de alterar examples/
 npm run test:ops       # deteta divergências e testa falhas, retenção e smoke HTTP
-npm run test:postgres  # com Docker ativo: backup e restauro em contentores descartáveis
+```
+
+O teste operacional usa simulações para os scripts pedagógicos e não arranca uma
+base de dados. O ensaio real de PostgreSQL é opcional, apenas para validar o
+conteúdo do laboratório, com Docker ativo:
+
+```bash
+npm run test:lab:postgres
 ```
 
 `examples/postgres/backup.sh` publica apenas dumps válidos e não vazios;

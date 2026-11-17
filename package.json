@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "examples:sync": "node scripts/sync-guide-examples.mjs",
     "test:ops": "node scripts/sync-guide-examples.mjs --check && node --test tests/operations.test.mjs",
-    "test:postgres": "node scripts/test-postgres-lab.mjs"
+    "test:lab:postgres": "node scripts/test-postgres-lab.mjs"
   },
   "dependencies": {
     "html-react-parser": "^6.1.5",

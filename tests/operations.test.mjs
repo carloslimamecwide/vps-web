@@ -6,7 +6,7 @@ import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, writeFile, readdir, readFile, stat, rm, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { gunzipSync } from "node:zlib";
+import { gunzipSync, gzipSync } from "node:zlib";
 
 const exec = promisify(execFile);
 const root = resolve(import.meta.dirname, "..");
@@ -81,6 +81,72 @@ test("uma retenção inválida falha antes de criar ficheiros", async () => {
   try {
     await assert.rejects(exec("bash", [backup], { env: { ...fixture.env, RETENTION_DAYS: "-1" } }), /inteiro positivo/);
     assert.deepEqual(await readdir(fixture.backups), []);
+  } finally { await fixture.clean(); }
+});
+
+test("o restauro aguarda o servidor TCP e não aceita o socket temporário de inicialização", async () => {
+  const fixture = await backupFixture("success");
+  try {
+    const bin = join(fixture.directory, "bin");
+    await writeFile(join(bin, "docker"), `#!/bin/sh
+case "$1" in
+  run) printf 'container-de-teste\\n' ;;
+  rm) touch "$MOCK_RESTORE_STATE/cleaned" ;;
+  exec)
+    shift
+    interactive=false
+    if [ "$1" = -i ]; then interactive=true; shift; fi
+    shift
+    command=$1
+    shift
+    case "$command" in
+      pg_isready)
+        host=''
+        while [ "$#" -gt 0 ]; do
+          case "$1" in
+            -h|--host) host=$2; shift ;;
+            --host=*) host=\${1#--host=} ;;
+          esac
+          shift
+        done
+        # O bootstrap responde pelo socket, mas ainda não aceita TCP.
+        if [ -z "$host" ]; then exit 0; fi
+        attempt=0
+        if [ -f "$MOCK_RESTORE_STATE/attempts" ]; then
+          attempt=$(cat "$MOCK_RESTORE_STATE/attempts")
+        fi
+        attempt=$((attempt + 1))
+        printf '%s' "$attempt" > "$MOCK_RESTORE_STATE/attempts"
+        if [ "$attempt" -lt 3 ]; then exit 1; fi
+        touch "$MOCK_RESTORE_STATE/ready"
+        ;;
+      psql)
+        if [ ! -f "$MOCK_RESTORE_STATE/ready" ]; then
+          printf 'FATAL: terminating connection due to administrator command\\n' >&2
+          exit 2
+        fi
+        if [ "$interactive" = true ]; then
+          cat > "$MOCK_RESTORE_STATE/restored.sql"
+        else
+          printf 'exemplo1\\n'
+        fi
+        ;;
+      *) exit 1 ;;
+    esac
+    ;;
+  *) exit 1 ;;
+esac
+`, { mode: 0o755 });
+    await writeFile(join(bin, "sleep"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    const archive = join(fixture.backups, "restore.sql.gz");
+    await writeFile(archive, gzipSync("SELECT 1;\n"));
+    const result = await exec("bash", [join(root, "examples/postgres/restore-check.sh"), archive], {
+      env: { ...fixture.env, MOCK_RESTORE_STATE: fixture.directory },
+    });
+    assert.match(result.stdout, /Restauro de teste concluído/);
+    assert.equal(await readFile(join(fixture.directory, "attempts"), "utf8"), "3");
+    assert.equal(await readFile(join(fixture.directory, "restored.sql"), "utf8"), "SELECT 1;\n");
+    await stat(join(fixture.directory, "cleaned"));
   } finally { await fixture.clean(); }
 });
 

@@ -27,7 +27,9 @@ não faz parte deste repositório e não foi inspecionada.
 - Recursos para o serviço: limite de 512 MiB e um CPU, ajustáveis após medição
 
 A aplicação deste guia não tem base de dados nem precisa de secrets de e-mail.
-Os backups PostgreSQL apresentados no conteúdo pertencem ao laboratório.
+Os backups PostgreSQL apresentados no conteúdo pertencem ao laboratório. O CI da
+aplicação não executa o ensaio real de PostgreSQL; esse ensaio é opcional através
+de `npm run test:lab:postgres`.
 
 Se o proxy for Nginx em Docker, configura a resolução do upstream no runtime para
 acompanhar a mudança de IP ao recriar o contentor. Dentro do bloco `location /`,
@@ -133,3 +135,8 @@ dados; uma rotação exige um procedimento próprio na base e nos consumidores.
 O backup usa modo estrito, ficheiro temporário e retenção após sucesso. O restauro
 de teste usa um PostgreSQL descartável sem rede, portas ou volumes da origem. Deve
 ser repetido regularmente e complementado por cópias fora do VPS.
+
+A prontidão do PostgreSQL é verificada por TCP em `127.0.0.1`. O servidor temporário
+de inicialização da imagem oficial aceita sockets Unix e depois é desligado;
+esperar apenas pelo socket podia iniciar o restauro durante essa fase transitória.
+[Entrypoint oficial](https://github.com/docker-library/postgres/blob/master/docker-entrypoint.sh).

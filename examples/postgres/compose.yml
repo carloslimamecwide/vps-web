@@ -18,7 +18,7 @@ services:
     mem_limit: 1g
     cpus: 1.0
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "exemplo1", "-d", "exemplo1"]
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "exemplo1", "-d", "exemplo1"]
       interval: 10s
       timeout: 5s
       retries: 5
